@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Escacs</title><meta name="color-scheme" content="light dark"><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='52' font-size='52'>♞</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#e9eef0;--ink:#1c2b36;--mute:#5d707d;--lt:#d7e2e6;--dk:#6d8ea3;--hi:#f2b84b;--chk:#d9534f;--panel:#fff;--wp:#fff;--bp:#14202a;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141c22;--ink:#e6edf0;--mute:#93a5b0;--panel:#1d2831}}
+:root[data-theme="dark"]{--bg:#141c22;--ink:#e6edf0;--mute:#93a5b0;--panel:#1d2831}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Bricolage Grotesque",system-ui,sans-serif;display:flex;justify-content:center}
+main{width:min(96vw,600px);padding:18px 0 28px}
+h1{font-size:1.7rem;font-weight:800;margin:0 0 4px;letter-spacing:-.02em}
+.lv{display:flex;align-items:center;gap:10px;margin-bottom:14px;color:var(--mute);font-size:.92rem}
+.pips{display:flex;gap:4px}
+.pips i{width:22px;height:8px;border-radius:2px;background:var(--lt);opacity:.5}
+.pips i.on{background:var(--hi);opacity:1}
+#board{--sq:min(11.6vw,70px);display:grid;grid-template-columns:repeat(8,var(--sq));grid-auto-rows:var(--sq);border:3px solid var(--ink);width:max-content;margin:0 auto;user-select:none}
+.s{position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:calc(var(--sq)*.78*var(--pz,1));line-height:1}
+.s.l{background:var(--bl,#d7e2e6)}.s.d{background:var(--bd,#6d8ea3)}
+.s.last::before{content:"";position:absolute;inset:0;background:var(--hi);opacity:.45}
+.s.sel{box-shadow:inset 0 0 0 4px var(--hi)}
+.s.chk{background:radial-gradient(circle,var(--chk),transparent 75%)}
+.s.t::after{content:"";position:absolute;width:30%;height:30%;border-radius:50%;background:var(--ink);opacity:.35}
+.s.t.x::after{width:88%;height:88%;background:none;border:4px solid var(--ink);opacity:.35}
+.p{position:relative;z-index:1;font-family:"Segoe UI Symbol","Noto Sans Symbols 2","DejaVu Sans",sans-serif}
+.p.w{color:var(--pw,#fff);text-shadow:var(--sw,0 0 2px #000,0 0 2px #000,0 1px 1px #000)}
+.p.b{color:var(--pb,#14202a);text-shadow:var(--sb,0 0 1px rgba(255,255,255,.5))}
+.c{position:absolute;font-size:10px;font-family:system-ui,sans-serif;font-weight:600;opacity:.7;z-index:1;color:var(--ink)}
+.c.r{top:2px;left:3px}.c.f{bottom:1px;right:3px}
+#st{margin:14px 0 6px;font-weight:600;font-size:1.1rem;min-height:1.5em}
+#note{color:var(--mute);font-size:.9rem;min-height:1.3em;margin-bottom:12px}
+.bt{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+button{font:inherit;font-weight:600;padding:9px 16px;border-radius:6px;border:2px solid var(--ink);background:var(--panel);color:var(--ink);cursor:pointer}
+button.pri{background:var(--ink);color:var(--bg)}
+button:focus-visible,.s:focus-visible{outline:3px solid var(--hi);outline-offset:2px}
+#mv{background:var(--panel);border-radius:6px;padding:10px 12px;max-height:130px;overflow:auto;font-size:.9rem;line-height:1.7;color:var(--mute)}
+#mv b{color:var(--ink);font-weight:600;margin-right:2px}
+#mv span{margin-right:10px;white-space:nowrap}
+.s.own:not(.sel):hover .p{transform:translateY(-3px);transition:transform .12s}
+.s.sel .p{animation:lift .18s ease-out forwards;filter:drop-shadow(0 6px 4px rgba(0,0,0,.35))}
+@keyframes lift{to{transform:translateY(-4px) scale(1.14)}}
+.s.t::after{animation:pulse 1.1s ease-in-out infinite}
+.s.t.x::after{animation:ring 1.1s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.3);opacity:.6}}
+@keyframes ring{50%{transform:scale(.9);opacity:.65}}
+.s.chk{animation:chkp .9s ease-in-out infinite}
+@keyframes chkp{50%{filter:brightness(1.3)}}
+.cap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:4;pointer-events:none}
+.burst{position:absolute;inset:8%;border:3px solid var(--hi);border-radius:50%;z-index:4;pointer-events:none;opacity:0}
+#start,#home,#cust,#endg,#trn,#prom{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--bg) 82%,transparent);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);padding:16px}
+#start[hidden],#home[hidden],#cust[hidden],#endg[hidden],#trn[hidden],#prom[hidden]{display:none}
+.card{background:var(--panel);border:3px solid var(--ink);border-radius:10px;padding:22px;width:min(100%,440px);animation:rise .35s ease-out}
+@keyframes rise{from{transform:translateY(14px);opacity:0}}
+.card h2{margin:0 0 4px;font-size:1.5rem;font-weight:800}
+.card p{margin:0 0 14px;color:var(--mute);font-size:.92rem}
+#lvs{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+#lvs button{display:flex;gap:10px;align-items:center;text-align:left}
+#lvs b{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--lt);color:#1c2b36}
+#lvs button[aria-pressed=true]{background:var(--hi);color:#1c2b36}
+.ck{display:flex;gap:8px;align-items:flex-start;margin-bottom:16px;font-size:.92rem;cursor:pointer}
+#lvs button{flex-direction:column;align-items:flex-start;gap:2px;padding:12px 14px;transition:transform .12s}
+#lvs button:hover{transform:translateY(-2px);background:var(--hi);color:#1c2b36}
+#lvs b{display:block;width:auto;height:auto;background:none;border-radius:0;font-size:1.25rem;font-weight:800;color:inherit;line-height:1}
+#lvs button{flex-direction:row;align-items:center;gap:10px;padding:8px 10px}
+#lvs .t{display:flex;flex-direction:column;gap:2px}
+#lvs small{font-size:.85rem;font-weight:600}
+.pa{flex:none;width:46px;height:46px;border-radius:8px;overflow:hidden}
+.pa svg,.av svg{display:block;width:100%;height:100%}
+.bot{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;min-height:76px}
+.av{flex:none;width:68px;height:68px;border:3px solid var(--ink);border-radius:10px;overflow:hidden;background:var(--lt)}
+.av.hit{animation:hit .4s}
+@keyframes hit{20%{transform:translateX(-5px) rotate(-4deg)}50%{transform:translateX(5px) rotate(4deg)}80%{transform:translateX(-3px)}}
+.bi{display:flex;flex-direction:column;min-width:0;flex:1}
+.bi b{font-size:1.1rem;font-weight:800}
+.bi span{color:var(--mute);font-size:.88rem}
+.bub{position:relative;background:var(--panel);border:2px solid var(--ink);border-radius:10px;padding:7px 11px;margin-top:6px;font-size:.95rem;align-self:flex-start}
+.bub::before{content:"";position:absolute;left:-8px;top:9px;border:6px solid transparent;border-left:0;border-right-color:var(--ink)}
+.bub.pop{animation:popb .25s ease-out}
+@keyframes popb{from{transform:scale(.8);opacity:0}}
+.opt{background:var(--panel);border-radius:6px;padding:10px 12px;margin-bottom:12px}
+.opt summary{font-weight:600;cursor:pointer}
+.og{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
+.og>span{width:76px;color:var(--mute);font-size:.9rem}
+.og>div{display:flex;gap:6px;flex-wrap:wrap}
+.sw{width:42px;height:42px;padding:0;border-radius:6px;overflow:hidden;display:grid;grid-template:1fr 1fr/1fr 1fr}
+.sw i{display:block}
+.pk{width:60px;height:42px;padding:0;border-radius:6px;background:#8a9ba8;font-size:24px;line-height:1;display:flex;align-items:center;justify-content:center}
+.sw[aria-pressed=true],.pk[aria-pressed=true]{outline:3px solid var(--hi);outline-offset:1px}
+.hc{width:30px;height:30px;border-radius:50%;padding:0}
+.hc[aria-pressed=true]{outline:3px solid var(--ink);outline-offset:2px}
+.sm{padding:6px 12px;font-size:.88rem}
+.sm[aria-pressed=true]{background:var(--hi);color:#1c2b36}
+.og>.tg{flex-direction:column;gap:6px;font-size:.92rem}
+.card.big{max-height:92vh;overflow:auto}
+#lvs{max-height:58vh;overflow:auto}
+#pv{--sq:44px;display:grid;grid-template-columns:repeat(6,var(--sq));grid-auto-rows:var(--sq);width:max-content;border:3px solid var(--ink);margin-bottom:6px}
+#board.nc .c{display:none}
+#board.nh .s.t::after{display:none}
+.hv{display:flex;margin:0 0 14px 10px}
+.hv .pa{width:54px;height:54px;border-radius:50%;border:3px solid var(--panel);margin-left:-10px}
+#home .btn2{display:flex;flex-direction:column;gap:8px}
+#home .btn2 button{padding:13px;font-size:1.05rem}
+.mdd{color:var(--mute);font-size:.85rem;margin:4px 0 8px}
+.clk{display:flex;gap:10px;margin:0 0 10px}
+.cb{flex:1;border:3px solid var(--ink);border-radius:10px;padding:6px 12px;background:var(--panel);text-align:center;transition:background .2s}
+.cb small{display:block;font-size:.8rem;color:var(--mute)}
+.cb b{display:block;font-size:2.2rem;font-variant-numeric:tabular-nums;line-height:1.1}
+.cb.on{background:var(--hi);color:#1c2b36}.cb.on small{color:#1c2b36}
+.cb.lo b{color:#d9534f;animation:lowp .8s ease-in-out infinite}
+@keyframes lowp{50%{opacity:.45}}
+.mat{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:.9rem;color:var(--mute)}
+.mat>div{display:flex;gap:6px;align-items:center}
+.mat .cp{font-size:1.15rem;letter-spacing:-3px}
+.mat b{color:var(--ink)}
+.s.bm::after{content:"";position:absolute;inset:3px;border:3px dashed #2e9e5b;border-radius:6px;z-index:2;pointer-events:none}
+.ana{background:var(--panel);border-radius:6px;padding:12px;margin-bottom:12px}
+.ana h3{margin:0 0 8px}
+#gr{width:100%;height:90px;background:var(--bg);border-radius:6px;color:var(--ink)}
+.ans{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;font-size:.85rem}
+.ans>div{background:var(--bg);border-radius:6px;padding:8px}
+.ans b{font-size:1.5rem;display:block}
+.ani{min-height:2.6em;font-weight:600;margin:8px 0;font-size:.92rem}
+.anl{display:flex;flex-wrap:wrap;gap:4px;max-height:190px;overflow:auto;margin-bottom:10px}
+.anl button{padding:3px 8px;font-size:.82rem;border-width:1px}
+.anl button.cur{outline:3px solid var(--hi)}
+.anl i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
+.card .av{width:90px;height:90px;margin:0 auto 10px}
+.btn2{display:flex;flex-direction:column;gap:8px}.btn2 button{padding:13px}
+.dg{--sq:34px;display:grid;grid-template-columns:repeat(8,var(--sq));grid-auto-rows:var(--sq);width:max-content;border:2px solid var(--ink);margin:10px auto}
+#trb h4{margin:14px 0 6px;color:var(--mute);font-size:.9rem}
+#trb p{line-height:1.5}
+.li{display:block;width:100%;text-align:left;margin-bottom:6px}
+.pg{display:flex;flex-wrap:wrap;gap:6px}
+.pn{width:44px;height:44px;padding:0}
+.pn.ok{background:#2e9e5b;color:#fff}
+#lvs{max-height:none;overflow:visible}
+@media (prefers-reduced-motion:reduce){.s *,.s::after,.s.chk,.card{animation:none!important}}
+#board{position:relative}.p.ghost{position:absolute;opacity:.45;pointer-events:none;z-index:3}
+.bdg{position:absolute;top:-4px;right:-4px;z-index:7;width:20px;height:20px;border-radius:50%;color:#fff;font:700 11px/20px system-ui,sans-serif;text-align:center;font-style:normal;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.cb.lo,.cb.lo.on{background:#d9534f;color:#fff}.cb.lo small{color:#fff}.cb.lo b{color:#fff;animation:none}
+.pa{width:64px;height:64px;border-radius:12px}.av{width:96px;height:96px}.bot{min-height:104px}.card .av{width:120px;height:120px}.hv .pa{width:72px;height:72px}
+[hidden]{display:none!important}
+#home .card{max-height:92vh;overflow:auto}
+.s .p{touch-action:none}
+.s.own{cursor:grab}.s.t.x::after{border-color:#d9534f}
+.av{animation:brt 4s ease-in-out infinite}@keyframes brt{50%{transform:scale(1.03)}}
+@media (prefers-reduced-motion:reduce){.av{animation:none}}
+button{transition:transform .1s,background .15s;touch-action:manipulation;user-select:none}button:active{transform:scale(.96)}
+body,.card,.cb,#mv{transition:background-color .3s,color .3s}
+#board{box-shadow:0 6px 18px rgba(0,0,0,.18)}#mv{scrollbar-width:thin}
+*{-webkit-tap-highlight-color:transparent}
+#mv span:last-child{color:var(--ink);font-weight:600}
+.s.t:hover{outline:3px solid var(--hi);outline-offset:-3px}
+.s.sel .p{filter:drop-shadow(0 0 7px var(--hi)) drop-shadow(0 6px 4px rgba(0,0,0,.35))}
+#board.nl .s.last::before{display:none}.mat.hid,.bot.hid{display:none}
+main{position:relative}.qb{position:absolute;top:18px;right:0;display:flex;gap:6px}.qb button{padding:4px 9px;font-size:.95rem}
+.s{border-radius:var(--rad,0)}.s::before{border-radius:inherit}
+.psh .p{filter:drop-shadow(0 3px 2px rgba(0,0,0,.4))}
+.hcn .p.w{text-shadow:0 0 3px #000,0 0 3px #000,0 0 3px #000!important}.hcn .p.b{text-shadow:0 0 3px #fff,0 0 3px #fff!important}
+.mono .cb b{font-family:ui-monospace,Menlo,Consolas,monospace}
+</style>
+</head>
+<body>
+<noscript>Cal JavaScript per jugar.</noscript><main>
+<h1>Escacs</h1>
+<div class="bot"><div id="av" class="av"></div><div class="bi"><b id="bn"></b><span id="be"></span><div id="bub" class="bub" hidden></div></div></div>
+<div class="clk" id="clk" hidden></div>
+<div id="board" role="grid" aria-label="Tauler d’escacs"></div>
+<div id="mat" class="mat"></div>
+<div id="st" aria-live="polite"></div>
+<div id="note"></div>
+<div class="bt" id="gbt"><button class="pri" id="nw">Nova partida</button><button id="dr">Taules</button><button id="cp">Copiar jugades</button><button id="rs">Abandonar</button><button id="cb">Personalitzar</button></div>
+<div class="bt" id="tbt" hidden><button id="tp">Pista</button><button id="ts">Solució</button><button class="pri" id="tn">Següent</button><button id="tx">Sortir</button></div>
+<div id="ana" class="ana" hidden><h3>Anàlisi de la partida</h3><div id="anp"></div><div id="ang" hidden><div id="ans" class="ans"></div><svg id="gr" viewBox="0 0 560 90" preserveAspectRatio="none" aria-label="Gràfic d’avaluació"></svg><div class="bt" style="margin-top:8px"><button id="a0" aria-label="Inici">⏮</button><button id="a1" aria-label="Anterior">◀</button><button id="a2" aria-label="Següent">▶</button><button id="a3" aria-label="Final">⏭</button></div><div id="ani" class="ani"></div><div id="anl" class="anl"></div><div class="bt"><button class="pri" id="a4">Jugar de nou</button><button id="a5">Menú</button></div></div></div>
+<div id="mv"></div>
+</main>
+<div id="start" role="dialog" aria-label="Tria un rival" hidden><div class="card big"><h2>Nova partida</h2><div class="og"><span>Mode</span><div id="md"></div></div><div id="mdd" class="mdd"></div><div class="og"><span>Color</span><div id="cl"></div></div><div class="og"><span>Temps</span><div id="tm"></div></div><p style="margin-top:12px">Tria un rival. Com més alt l’Elo, més fort juga.</p><div id="lvs"></div><button id="bk" style="margin-top:12px">Enrere</button></div></div>
+<div id="home" role="dialog" aria-label="Menú"><div class="card"><div class="hv" id="hv"></div><h2>Escacs</h2><p>Juga contra 24 rivals i entrena amb lliçons i problemes.</p><p id="hs" style="font-size:.85rem"></p><details id="hA" style="font-size:.85rem;margin-bottom:10px"><summary>Logros</summary><div id="hAl"></div></details><div class="btn2"><button class="pri" id="hp">Jugar</button><button id="ht">Entrenar</button><button id="hd">Problema del dia</button><button id="hc">Personalitzar</button></div></div></div>
+<div id="prom" role="dialog" aria-label="Coronació" hidden><div class="card" style="text-align:center"><h2>Corona el peó</h2><div class="pg" id="pb" style="justify-content:center"></div></div></div>
+<div id="endg" role="dialog" aria-label="Final de la partida" hidden><div class="card" style="text-align:center"><div class="av" id="ea"></div><h2 id="eh"></h2><p id="es"></p><div class="btn2"><button class="pri" id="e1">Jugar de nou</button><button id="e2">Analitzar partida</button><button id="e5">Revenja amb l’altre color</button><button id="e4">Compartir resultat</button><button id="e3">Menú</button></div></div></div>
+<div id="trn" role="dialog" aria-label="Entrenar" hidden><div class="card big"><h2>Entrenar</h2><div class="og" id="trt"></div><div id="trb"></div><button id="trx" style="width:100%;margin-top:14px">Enrere</button></div></div>
+<div id="cust" role="dialog" aria-label="Personalitzar" hidden><div class="card big"><h2>Personalitzar</h2><div id="pv"></div><div class="og"><span>Tauler</span><div id="bt"></div></div><div class="og"><span>Peces</span><div id="pt"></div></div><div class="og"><span>Forma</span><div id="sh"></div></div><div class="og"><span>Ressaltat</span><div id="hl"></div></div><div class="og"><span>Mida</span><input type="range" id="pz" min=".7" max="1.1" step=".05" aria-label="Mida de les peces"></div><div class="og"><span>Aspecte</span><div id="th"></div></div><div class="og"><span>Opcions</span><div class="tg"><label><input type="checkbox" id="co"> Coordenades</label><label><input type="checkbox" id="hn"> Pistes de moviment</label><label><input type="checkbox" id="an"> Animacions</label><label><input type="checkbox" id="sn"> Efectes de so</label></div></div><div class="og"><span>Volum</span><input type="range" id="vl" min="0" max="1" step=".1" aria-label="Volum"></div><div class="og"><span>Nom</span><input id="xn" maxlength="12" style="font:inherit;padding:6px;border:2px solid var(--ink);border-radius:6px;background:var(--panel);color:var(--ink);width:150px"></div><div class="og"><span>Més</span><div class="tg"><label><input type="checkbox" id="xa"> Corona sempre a dama</label><label><input type="checkbox" id="xv"> Vibració</label><label><input type="checkbox" id="xt"> Tic-tac amb poc temps</label><label><input type="checkbox" id="xm"> Llista de jugades</label></div></div><div class="og"><span>Bot</span><div id="xb"></div></div><button class="pri" id="cd" style="width:100%;margin-top:16px">Fet</button></div></div>
+<script>
+const KN=[[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]],DO=[[1,0],[-1,0],[0,1],[0,-1]],DD=[[1,1],[1,-1],[-1,1],[-1,-1]];
+const VAL={p:100,n:320,b:330,r:500,q:900,k:0},GL={k:"♚",q:"♛",r:"♜",b:"♝",n:"♞",p:"♟"};
+const LV=[
+{elo:400,d:1,n:320,s:{cn:2,adv:3,ks:0,ak:0}},
+{elo:600,d:1,n:170,s:{cn:5,adv:12,ks:0,ak:5}},
+{elo:800,d:2,n:110,s:{cn:3,adv:14,ks:0,ak:0}},
+{elo:1000,d:2,n:70,s:{cn:5,adv:7,ks:25,ak:7}},
+{elo:1200,d:2,n:30,s:{cn:10,adv:5,ks:60,ak:0}},
+{elo:1400,d:3,n:40,s:{cn:5,adv:11,ks:10,ak:6}},
+{elo:1600,d:3,n:15,s:{cn:8,adv:7,ks:45,ak:1}},
+{elo:1800,d:3,n:0,s:{cn:6,adv:7,ks:35,ak:3}}];
+const inb=(r,f)=>r>=0&&r<8&&f>=0&&f<8,isW=p=>p<"a";
+function newState(f9){const r=f9?back960():[..."rnbqkbnr"],b=[...r,...Array(8).fill("p"),...Array(32).fill(""),...Array(8).fill("P"),...r.map(x=>x.toUpperCase())],q=r.indexOf("r"),q2=r.lastIndexOf("r"),k=r.indexOf("k");RK={K:56+q2,Q:56+q,k:q2,q:q};KS={w:56+k,b:k};return{b,turn:"w",c:{K:1,Q:1,k:1,q:1},ep:-1,hm:0}}
+function att(b,s,by){const r=s>>3,f=s&7,w=by==="w",pr=w?r+1:r-1;
+for(const d of[-1,1])if(inb(pr,f+d)&&b[pr*8+f+d]===(w?"P":"p"))return 1;
+for(const[a,c]of KN)if(inb(r+a,f+c)&&b[(r+a)*8+f+c]===(w?"N":"n"))return 1;
+for(const[a,c]of[...DO,...DD])if(inb(r+a,f+c)&&b[(r+a)*8+f+c]===(w?"K":"k"))return 1;
+for(const[ds,t]of[[DO,"r"],[DD,"b"]])for(const[a,c]of ds){let rr=r+a,ff=f+c;while(inb(rr,ff)){const p=b[rr*8+ff];if(p){if(isW(p)===w){const l=p.toLowerCase();if(l==="q"||l===t)return 1}break}rr+=a;ff+=c}}
+return 0}
+function gen(st){const{b,turn,c,ep}=st,w=turn==="w",out=[],en=w?"b":"w";
+const add=(f,t,x)=>out.push({f,t,...x});
+for(let s=0;s<64;s++){const p=b[s];if(!p||isW(p)!==w)continue;const l=p.toLowerCase(),r=s>>3,f=s&7;
+if(l==="p"){const d=w?-1:1,nr=r+d,pr=nr===(w?0:7);
+if(inb(nr,f)&&!b[nr*8+f]){add(s,nr*8+f,{pr});if(r===(w?6:1)&&!b[(nr+d)*8+f])add(s,(nr+d)*8+f,{})}
+for(const dd of[-1,1]){const ff=f+dd;if(!inb(nr,ff))continue;const t=nr*8+ff,q=b[t];if(q&&isW(q)!==w)add(s,t,{pr});else if(t===ep)add(s,t,{e:1})}}
+else if(l==="n"||l==="k"){for(const[a,cc]of l==="n"?KN:[...DO,...DD]){if(!inb(r+a,f+cc))continue;const t=(r+a)*8+f+cc,q=b[t];if(!q||isW(q)!==w)add(s,t,{})}
+if(l==="k"&&s===KS[w?"w":"b"])cast(st,w,out,add)}
+else{for(const[a,cc]of l==="r"?DO:l==="b"?DD:[...DO,...DD]){let rr=r+a,ff=f+cc;while(inb(rr,ff)){const t=rr*8+ff,q=b[t];if(!q)add(s,t,{});else{if(isW(q)!==w)add(s,t,{});break}rr+=a;ff+=cc}}}}
+return out}
+function apply(st,m){const b=st.b.slice(),p=b[m.f],w=isW(p),l=p.toLowerCase(),cap=b[m.t]||m.e;
+b[m.t]=p;b[m.f]="";if(m.e)b[(m.f>>3)*8+(m.t&7)]="";if(m.pr){const q=m.pp||"q";b[m.t]=w?q.toUpperCase():q}
+if(m.c){b[m.f]="";b[m.rs]="";b[m.t]=w?"K":"k";b[m.rt]=w?"R":"r"}
+const c={...st.c};if(l==="k"){if(w)c.K=c.Q=0;else c.k=c.q=0}
+for(const q of[m.f,m.t])for(const k of["K","Q","k","q"])if(q===RK[k])c[k]=0;
+return{b,turn:w?"b":"w",c,ep:l==="p"&&Math.abs(m.t-m.f)===16?(m.f+m.t)/2:-1,hm:l==="p"||cap?0:st.hm+1}}
+function inCheck(st){const w=st.turn==="w";return att(st.b,st.b.indexOf(w?"K":"k"),w?"b":"w")}
+function legal(st){const w=st.turn==="w";return gen(st).filter(m=>{const n=apply(st,m);return!att(n.b,n.b.indexOf(w?"K":"k"),w?"b":"w")})}
+let S={cn:5,adv:7,ks:25,ak:0};
+function ev(b){let v=0;const wk=b.indexOf("K"),bk=b.indexOf("k");for(let s=0;s<64;s++){const p=b[s];if(!p)continue;const w=isW(p),l=p.toLowerCase(),r=s>>3,f=s&7,cn=7-Math.abs(f-3.5)-Math.abs(r-3.5);let x=VAL[l]*(S.mv||1);if(l==="r")x+=(S.rk||0)*(w?7-r:r);if(l==="q")x+=(S.qa||0)*cn;
+if(l==="n"||l==="b")x+=cn*S.cn;else if(l==="p")x+=(w?6-r:r-1)*S.adv+cn*2;else if(l==="k"&&r===(w?7:0)&&(f<3||f>5))x+=S.ks;
+if(S.ak&&l!=="p"&&l!=="k"){const k=w?bk:wk;x+=S.ak*(7-Math.max(Math.abs((k>>3)-r),Math.abs((k&7)-f)))}
+v+=w?x:-x}return v}
+function sc(st,m){const v=st.b[m.t];return(v?VAL[v.toLowerCase()]*10-VAL[st.b[m.f].toLowerCase()]:m.e?900:0)+(m.pr?800:0)}
+const ord=(st,ms)=>ms.sort((a,b)=>sc(st,b)-sc(st,a));
+function qs(st,a,bt,d){const st0=(st.turn==="w"?1:-1)*ev(st.b);if(d===0||st0>=bt)return st0;if(st0>a)a=st0;
+for(const m of ord(st,legal(st).filter(m=>st.b[m.t]||m.e))){const v=-qs(apply(st,m),-bt,-a,d-1);if(v>=bt)return v;if(v>a)a=v}return a}
+function nm(st,d,a,bt){if(d===0)return qs(st,a,bt,3);const ms=legal(st);if(!ms.length)return inCheck(st)?-50000-d:0;if(st.hm>=100)return 0;
+for(const m of ord(st,ms)){const v=-nm(apply(st,m),d-1,-bt,-a);if(v>=bt)return v;if(v>a)a=v}return a}
+function aiMove(st,lv){const L=LV[lv-1];S=L.s;let best=null,bv=-1e9;
+for(const m of ord(st,legal(st))){const v=-nm(apply(st,m),L.d-1,-1e9,1e9)+Math.random()*L.n;if(v>bv){bv=v;best=m}}return best}
+
+const $=id=>document.getElementById(id),sqn=s=>"abcdefgh"[s&7]+(8-(s>>3));
+let st,hist,moves,sel=null,lms=[],last=null,lv,busy,over,since,note,anim=null,adaptOn=true;
+try{lv=+localStorage.getItem("escacs-lv")||3}catch(e){lv=3}
+adaptOn=false;
+const LN=["Aprenent","Fàcil","Suau","Mitjà","Avançat","Difícil","Mestre"];
+const saveLv=()=>{try{localStorage.setItem("escacs-lv",lv)}catch(e){}};
+function newGame(){ANM=0;TR=0;EG=0;FLAG=0;BMV=null;$("ana").hidden=true;ME=COL===2?(Math.random()<.5?"w":"b"):COL?"b":"w";st=newState(MODE===1);st.k3=[0,0];hist=[];moves=[];sel=null;lms=[];last=null;busy=false;over=null;since=9;note="Jugues amb "+(ME==="w"?"blanques":"negres")+" · "+MN[MODE]+".";panel();busy=ME==="b";render();bub(BI[lv-1].say.hi);clkStart();if(busy)setTimeout(()=>{if(!over)play(aiMove(st,lv))},BDL[BS])}
+function name(m,p,capd){if(m.c)return(m.t&7)===6?"O-O":"O-O-O";const l=p.toLowerCase();return(l==="p"?"":GL[l]+"\uFE0E")+sqn(m.f)+(capd?"x":"–")+sqn(m.t)+(m.pr?"=♛\uFE0E":"")+(m.e?" e.p.":"")}
+function play(m){const p=st.b[m.f];if(TL&&TIN[TI])clk[isW(p)?0:1]+=TIN[TI];const capd=st.b[m.t]||m.e;hist.push({st,last,n:moves.length,m});
+let nmv=name(m,p,capd);const cs=m.e?(m.f>>3)*8+(m.t&7):m.t,cp=m.c?null:st.b[cs];anim={m,cs,cap:cp?GL[cp.toLowerCase()]+"\uFE0E":null,cc:cp?(isW(cp)?"w":"b"):""};st=apply(st,m);last=m;sel=null;lms=[];
+DICE(p);const ms=legal(st),chk=inCheck(st);
+if(!ms.length){nmv+=chk?"#":"";over=chk?(st.turn==="b"?"w":"b"):"d"}else{if(chk)nmv+="+";
+const ps=st.b.filter(x=>x&&x.toLowerCase()!=="k");
+if(st.hm>=100||!ps.length||(ps.length===1&&/[nb]/i.test(ps[0])))over="d"}
+vwin(p,chk);REP();moves.push(nmv);
+snd(over?(over==="d"?"draw":over===ME?"win":"lose"):chk?"check":anim.cap?"capture":m.c?"castle":m.pr?"promo":"move");
+sayEv(over?(over==="d"?"draw":over===ME?"lose":"win"):isW(p)===(ME==="w")?(chk?"chk":anim.cap?"lost":""):(anim.cap?"took":""));
+if(over){if(adaptOn){if(over==="w")lv=Math.min(7,lv+1);else if(over==="b")lv=Math.max(1,lv-1);saveLv()}
+note=over==="d"?"Taules.":(over===ME?"Has guanyat.":"Has perdut.")+(adaptOn?(over==="w"?" El motor puja al nivell ":" El motor baixa al nivell ")+lv+".":"");render();return}
+const ai=st.turn!==ME;busy=ai;if(!ai)adapt();render();
+if(ai)setTimeout(()=>{if(!over)play(aiMove(st,lv))},BDL[BS])}
+function adapt(){if(!adaptOn)return;since++;const bal=ev(st.b);if(since<4)return;
+if(bal>300&&lv<7){lv++;since=0;note="Vas per davant: el motor puja al nivell "+lv+"."}
+else if(bal<-300&&lv>1){lv--;since=0;note="El motor va per davant: baixa al nivell "+lv+" perquè puguis recuperar."}
+saveLv()}
+const RM=matchMedia("(prefers-reduced-motion:reduce)").matches;
+function slide(a,b){a=di(a);b=di(b);const bd=$("board"),el=bd.children[b].querySelector(".p");if(!el)return;const w=bd.children[0].offsetWidth;el.style.zIndex=5;el.animate([{transform:`translate(${((a&7)-(b&7))*w}px,${((a>>3)-(b>>3))*w}px)`},{transform:"none"}],{duration:SLD[AS],easing:"cubic-bezier(.3,.7,.3,1)"})}
+function fx(sq,cls,txt,kf,o){const e=document.createElement("span");e.className=cls;if(txt)e.textContent=txt;sq.appendChild(e);e.animate(kf,o).onfinish=()=>e.remove()}
+function runAnim(){const a=anim;anim=null;if(!a||RM||!ANI)return;const bd=$("board"),m=a.m;slide(m.f,m.t);
+if(m.c){slide(m.rs,m.rt);for(const q of[m.t,m.rt])fx(bd.children[di(q)],"burst","",[{transform:"scale(.6)",opacity:.4},{transform:"scale(1.2)",opacity:0}],{duration:420,delay:260,easing:"ease-out",fill:"forwards"})}
+if(a.cap){const sq=bd.children[di(a.cs)];fx(sq,"cap p "+a.cc,a.cap,[{transform:"none",opacity:1},{transform:"rotate(28deg) scale(.15)",opacity:0}],{duration:420,delay:200,easing:"ease-in",fill:"both"});
+fx(sq,"burst","",[{transform:"scale(.3)",opacity:.9},{transform:"scale(1.5)",opacity:0}],{duration:450,delay:260,easing:"ease-out",fill:"forwards"})}}
+function avatar(c){const k=c.skin,h=c.hair,E="#1c2b36",hs=c.hs;let s=`<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" fill="${c.bg}"/><path d="M6 64c0-13 11-18 26-18s26 5 26 18z" fill="${c.top}"/><rect x="26" y="40" width="12" height="10" fill="${k}"/>`;
+if(hs===4)s+=`<path d="M13 32c-2-20 8-25 19-25s21 5 19 25l-1 20H14z" fill="${h}"/>`;
+s+=`<ellipse cx="32" cy="29" rx="14" ry="16" fill="${k}"/>`;
+if(c.bd)s+=`<path d="M18 33c0 12 6 17 14 17s14-5 14-17c-3 6-8 8-14 8s-11-2-14-8z" fill="${h}"/>`;
+if(hs===1)s+=`<path d="M17 27c-3-15 7-19 15-19s18 4 15 19c-3-6-8-10-15-10s-12 4-15 10z" fill="${h}"/>`;
+if(hs===2||hs===4)s+=`<path d="M17 26c0-13 7-18 15-18s15 5 15 18c-6-1-12-5-14-10-3 6-9 9-16 10z" fill="${h}"/>`;
+if(hs===3)s+=`<path d="M17 27l-3-12 8 4 3-11 6 9 6-9 3 11 8-4-3 12c-3-6-8-9-14-9s-11 3-14 9z" fill="${h}"/>`;
+if(c.hat)s+=`<path d="M16 22c0-9 7-13 16-13s16 4 16 13zM14 22h36v3H14z" fill="${c.hat}"/>`;
+if(c.cr)s+=`<path d="M20 12l2-10 6 6 4-8 4 8 6-6 2 10z" fill="#f2b84b" stroke="#c88a1c"/>`;
+s+=`<circle cx="26" cy="29" r="2" fill="${E}"/><circle cx="38" cy="29" r="2" fill="${E}"/><path d="${c.ex===2?"M21 23l9 3M43 23l-9 3":"M22 24h8M34 24h8"}" stroke="${E}" stroke-width="2.4" stroke-linecap="round"/>`;
+if(c.gl)s+=`<g fill="none" stroke="${E}" stroke-width="1.8"><circle cx="26" cy="29" r="5"/><circle cx="38" cy="29" r="5"/><path d="M31 29h2"/></g>`;
+const M=["M26 37q6 5 12 0","M27 38q6 2 11-3","M27 39q5-3 10 0","M27 38h10"];
+s+=c.ex===4?`<ellipse cx="32" cy="38" rx="4" ry="3.5" fill="#7a2e2e"/>`:`<path d="${M[c.ex]}" fill="none" stroke="${c.bd?"#fff":E}" stroke-width="2" stroke-linecap="round"/>`;
+return s+"</svg>"}
+const BI=[
+{n:"Pipo",a:{bg:"#f2b84b",skin:"#f3cfae",hair:"#8a4b1f",hs:3,top:"#4a90d9",ex:4},say:{hi:"Hola! Jo sóc el Pipo. Compte, que mosseg!",lost:"No! La meva peça!|Ei, aquesta era meva!",took:"Ha-ha, mireu què he fet!|Menjada!",chk:"Escac?! Això no val!",win:"He guanyat! Sí sí sí!",lose:"Buuu... jo volia guanyar.",draw:"Taules? I això què és?"}},
+{n:"Lola",a:{bg:"#e58f8f",skin:"#e9b894",hair:"#2a1a14",hs:4,top:"#d9534f",ex:1},say:{hi:"Vinga, que jo vaig a totes!",lost:"Ai! Em toques les peces?|Això t’ho cobraré.",took:"Te l’he pres!|Aquesta és meva.",chk:"Escac... m’has posat nerviosa.",win:"Ja ho sabia, sóc imparable!",lose:"Bé, però la propera et guanyo.",draw:"Taules? Vull revenja."}},
+{n:"Marc",a:{bg:"#8fc1a9",skin:"#d9a77a",hair:"#3a2a20",hs:1,top:"#2f6f5e",ex:0,hat:"#2f6f5e"},say:{hi:"Endavant els peons, sempre endavant!",lost:"Ostres, un soldat menys.|Perdre una peça no és res.",took:"Un més per a la col·lecció.",chk:"Escac, eh? Els peons ja arriben.",win:"Els peons sempre guanyen.",lose:"Bona partida. Els peons ploren.",draw:"Taules. Els peons descansen."}},
+{n:"Bruna",a:{bg:"#b9a3e3",skin:"#f1c9a5",hair:"#c0392b",hs:2,top:"#3c2a63",ex:2},say:{hi:"Vinga, a atacar el teu rei.",lost:"Ai, però seguiré atacant.|Cobraré aquesta peça aviat.",took:"Una peça menys per defensar!|Això és només el principi.",chk:"Escac? Em fas riure.",win:"El teu rei no tenia sortida.",lose:"Has aguantat l’atac. Molt bé.",draw:"Taules? Jo volia mat."}},
+{n:"Ramon",a:{bg:"#cfd8dc",skin:"#e7bd9a",hair:"#d8dde0",hs:0,top:"#6a4c3a",ex:3,bd:1},say:{hi:"Tranquil, noi. Aquí no hi ha pressa.",lost:"Hm, una pèrdua, i què.|Paciència, paciència.",took:"Així s’ha de fer, amb calma.",chk:"Escac... ja ho veia venir.",win:"L’experiència sempre guanya.",lose:"Has jugat bé, jove.",draw:"Taules. Una partida honrosa."}},
+{n:"Nadia",a:{bg:"#5fb3c9",skin:"#8d5a3b",hair:"#14202a",hs:4,top:"#1c2b36",ex:2},say:{hi:"Prepara’t. No faré presoners.",lost:"Això et costarà car.|Molt bé, ara em toca a mi.",took:"Una menys. Segueixo.",chk:"Escac? Ara t’ensenyo el que és bo.",win:"Ho tenia tot calculat.",lose:"Em sap greu perdre. T’ho mereixes.",draw:"Taules. No m’agrada."}},
+{n:"Vidal",a:{bg:"#d6c7a1",skin:"#f0c8a4",hair:"#7d7d7d",hs:1,top:"#3b5b7a",ex:3,gl:1},say:{hi:"Hola. Veurem qui domina el centre.",lost:"Interessant. Ho tenia previst.|Un sacrifici posicional, suposo.",took:"Aquesta era la jugada correcta.",chk:"Escac. Pel camí correcte.",win:"La posició era millor, i s’ha vist.",lose:"Impressionant. Ho analitzaré.",draw:"Taules. Una posició equilibrada."}},
+{n:"Greta",a:{bg:"#2c3e50",skin:"#f3cfae",hair:"#e0a93b",hs:2,top:"#e6edf0",ex:1,cr:1},say:{hi:"Benvingut. No t’ho posaré fàcil.",lost:"Ho he permès. Ho pagaràs.|Ben vist. Però no canvia res.",took:"Gràcies per la peça.",chk:"Escac... t’has guanyat el meu respecte.",win:"Escac i mat. Una altra vegada.",lose:"Felicitats. T’ho has guanyat.",draw:"Taules. Respecte mutu."}}];
+let gid=0,AC=null,SND=true,VOL=.6,ob=0,op=0;
+function avatar(c){const id="g"+gid++,k=c.skin,h=c.hair,E="#1c2b36",hs=c.hs;
+let s=`<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="${id}b" cx=".5" cy=".35" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#000" stop-opacity=".25"/></radialGradient><linearGradient id="${id}f" x1="0" x2="1"><stop offset="0" stop-color="#000" stop-opacity=".12"/><stop offset=".4" stop-color="#fff" stop-opacity=".12"/><stop offset="1" stop-color="#000" stop-opacity=".2"/></linearGradient></defs><rect width="64" height="64" fill="${c.bg}"/><rect width="64" height="64" fill="url(#${id}b)"/>`;
+if(hs===4)s+=`<path d="M12 34c-3-22 8-28 20-28s23 6 20 28l-1 22H13z" fill="${h}"/>`;
+s+=`<path d="M4 64c0-14 11-19 28-19s28 5 28 19z" fill="${c.top}"/><path d="M4 64c0-14 11-19 28-19s28 5 28 19z" fill="url(#${id}f)"/><path d="M26 38h12v9q-6 4-12 0z" fill="${k}"/><path d="M26 44q6 3 12 0v-4q-6 3-12 0z" fill="#000" opacity=".15"/><path d="M25 46l7 9 7-9" fill="${k}" stroke="rgba(0,0,0,.25)"/>`;
+if(c.sc)s+=`<path d="M22 46q10 6 20 0l2 6q-12 6-24 0z" fill="${c.sc}"/>`;
+s+=`<ellipse cx="17.5" cy="31" rx="2.6" ry="4" fill="${k}"/><ellipse cx="46.5" cy="31" rx="2.6" ry="4" fill="${k}"/>`;
+if(c.er)s+=`<circle cx="17.5" cy="36" r="1.6" fill="${c.er}"/><circle cx="46.5" cy="36" r="1.6" fill="${c.er}"/>`;
+s+=`<ellipse cx="32" cy="29" rx="14.5" ry="16.5" fill="${k}"/><ellipse cx="32" cy="29" rx="14.5" ry="16.5" fill="url(#${id}f)"/><circle cx="23.5" cy="35" r="3" fill="#ff7a7a" opacity=".22"/><circle cx="40.5" cy="35" r="3" fill="#ff7a7a" opacity=".22"/>`;
+if(c.bd)s+=`<path d="M17.5 31c0 14 6 20 14.5 20s14.5-6 14.5-20c-3 7-8 9-14.5 9s-11.5-2-14.5-9z" fill="${h}"/>`;
+if(hs===1)s+=`<path d="M17 27c-3-15 7-19 15-19s18 4 15 19c-3-6-8-10-15-10s-12 4-15 10z" fill="${h}"/>`;
+if(hs===2||hs===4)s+=`<path d="M17 26c0-13 7-18 15-18s15 5 15 18c-6-1-12-5-14-10-3 6-9 9-16 10z" fill="${h}"/>`;
+if(hs===3)s+=`<path d="M17 27l-3-12 8 4 3-11 6 9 6-9 3 11 8-4-3 12c-3-6-8-9-14-9s-11 3-14 9z" fill="${h}"/>`;
+if(hs)s+=`<path d="M23 14q9-5 18 0" stroke="#fff" stroke-opacity=".28" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+if(c.hp)s+=`<path d="M14 30c0-18 6-22 18-22s18 4 18 22" fill="none" stroke="${c.hp}" stroke-width="3"/><rect x="11" y="28" width="6" height="10" rx="3" fill="${c.hp}"/><rect x="47" y="28" width="6" height="10" rx="3" fill="${c.hp}"/>`;
+if(c.hat)s+=`<path d="M16 22c0-9 7-13 16-13s16 4 16 13z" fill="${c.hat}"/><path d="M14 22h36v3H14z" fill="${c.hat}"/><path d="M14 22h36" stroke="#fff" stroke-opacity=".3"/>`;
+if(c.cr)s+=`<path d="M19 12l2-10 6 6 5-9 5 9 6-6 2 10z" fill="#f2b84b" stroke="#c88a1c"/><circle cx="32" cy="8" r="1.3" fill="#d9534f"/>`;
+for(const x of[26,38])s+=`<ellipse cx="${x}" cy="29" rx="3.2" ry="${c.ex===4?3.4:2.7}" fill="#fff"/><circle cx="${x+.3}" cy="29" r="1.9" fill="${c.eye||"#3b2a1a"}"/><circle cx="${x+.3}" cy="29" r=".9" fill="#000"/><circle cx="${x+.9}" cy="28.3" r=".5" fill="#fff"/>`;
+s+=`<path d="${c.ex===2?"M21 23l9 3M43 23l-9 3":"M22 24q4-2 8 0M34 24q4-2 8 0"}" stroke="${E}" stroke-width="2.2" stroke-linecap="round" fill="none"/><path d="M32 30q-2 5 0 6q1.5 1 3 0" fill="none" stroke="rgba(0,0,0,.3)" stroke-width="1.4" stroke-linecap="round"/>`;
+if(c.gl)s+=`<g fill="rgba(180,220,255,.2)" stroke="${E}" stroke-width="1.8"><circle cx="26" cy="29" r="5.2"/><circle cx="38" cy="29" r="5.2"/><path d="M31 29h2"/></g>`;
+const M=["","M27 38q6 2 11-3","M27 39q5-3 10 0","M27 38h10"];
+s+=c.ex===4?`<ellipse cx="32" cy="39" rx="4" ry="3.5" fill="#7a2e2e"/>`:c.ex===0?`<path d="M26 38q6 6 12 0z" fill="#7a2e2e"/><path d="M27 38.6q5 2 10 0" stroke="#fff" stroke-width="1.6" fill="none"/>`:`<path d="${M[c.ex]}" fill="none" stroke="${E}" stroke-width="2" stroke-linecap="round"/>`;
+if(c.mu)s+=`<path d="M24 36q4-3 8 0q4-3 8 0q-4 4-8 1q-4 3-8-1z" fill="${h}" stroke="rgba(0,0,0,.25)"/>`;
+return s+"</svg>"}
+const AX=[{eye:"#2b6cb0"},{er:"#f2b84b"},{eye:"#2f6f5e",hp:"#14202a"},{eye:"#2f855a",er:"#e0f0ff"},{eye:"#555",mu:1},{er:"#f2b84b",sc:"#d9534f"},{eye:"#3b5b7a"},{eye:"#2b6cb0",er:"#fff",sc:"#c0392b"}];
+const BT=[["#d7e2e6","#6d8ea3"],["#eeeed2","#769656"],["#f0d9b5","#b58863"],["#e8e0f0","#9575cd"],["#dee3e6","#8ca2ad"],["#c9d3da","#3b4a57"]];
+const PS=[{w:"#fff",b:"#14202a",sw:"0 0 2px #000,0 0 2px #000,0 1px 1px #000",sb:"0 0 1px rgba(255,255,255,.5)"},{w:"#f3dfb8",b:"#5b3a1e",sw:"0 0 2px #5b3a1e,0 1px 1px #5b3a1e",sb:"0 0 1px #f3dfb8"},{w:"#ffd76a",b:"#3a3f4b",sw:"0 0 2px #7a5a00,0 1px 1px #7a5a00",sb:"0 0 2px #ffd76a"},{w:"#5ef2ff",b:"#ff5ee8",sw:"0 0 6px #5ef2ff,0 0 12px #5ef2ff",sb:"0 0 6px #ff5ee8,0 0 12px #ff5ee8"},{w:"#eaf8ff",b:"#1f4e79",sw:"0 0 3px #1f4e79,0 1px 2px #1f4e79",sb:"0 0 3px #a8d8ff"}];
+try{const o=JSON.parse(localStorage.getItem("escacs-op")||"{}");ob=o.b||0;op=o.p||0;SND=o.s!==false;VOL=o.v??.6}catch(e){}
+function applyOpt(){const r=document.documentElement.style,t=BT[ob],p=PS[op];r.setProperty("--bl",t[0]);r.setProperty("--bd",t[1]);r.setProperty("--pw",p.w);r.setProperty("--pb",p.b);r.setProperty("--sw",p.sw);r.setProperty("--sb",p.sb);
+$("bt").innerHTML=BT.map((t,i)=>`<button class="sw" data-i="${i}" aria-pressed="${i===ob}" aria-label="Tauler ${i+1}"><i style="background:${t[0]}"></i><i style="background:${t[1]}"></i><i style="background:${t[1]}"></i><i style="background:${t[0]}"></i></button>`).join("");
+$("pt").innerHTML=PS.map((p,i)=>`<button class="pk" data-i="${i}" aria-pressed="${i===op}" aria-label="Peces ${i+1}"><span style="color:${p.w};text-shadow:${p.sw}">♞\uFE0E</span><span style="color:${p.b};text-shadow:${p.sb}">♞\uFE0E</span></button>`).join("");
+$("sn").checked=SND;$("vl").value=VOL;
+try{localStorage.setItem("escacs-op",JSON.stringify({b:ob,p:op,s:SND,v:VOL}))}catch(e){}}
+$("bt").onclick=e=>{const b=e.target.closest("button");if(b){ob=+b.dataset.i;applyOpt();snd("tick")}};
+$("pt").onclick=e=>{const b=e.target.closest("button");if(b){op=+b.dataset.i;applyOpt();snd("tick")}};
+$("sn").onchange=()=>{SND=$("sn").checked;applyOpt();snd("tick")};
+$("vl").oninput=()=>{VOL=+$("vl").value;applyOpt()};
+function snd(k){try{if(VB&&(k==="capture"||k==="check"||k==="lose")&&navigator.vibrate)navigator.vibrate(k==="capture"?25:60)}catch(e){}if(!SND||document.hidden)return;PV=/^(move|capture|castle)$/.test(k)?1+(Math.random()*.075-.0375):1;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume();const t=AC.currentTime;
+const tn=(f,d,ty,v,at=0,to)=>{const o=AC.createOscillator(),e=AC.createGain();o.type=(PKT[Z.sp]||{})[ty]||ty;o.frequency.setValueAtTime(f*PV,t+at);if(to)o.frequency.exponentialRampToValueAtTime(to*PV,t+at+d);e.gain.setValueAtTime(v*VOL+.001,t+at);e.gain.exponentialRampToValueAtTime(.001,t+at+d);o.connect(e);e.connect(AC.destination);o.start(t+at);o.stop(t+at+d+.02)};
+const nz=(d,v,at=0)=>{const n=AC.sampleRate*d|0,b=AC.createBuffer(1,n,AC.sampleRate),a=b.getChannelData(0);for(let i=0;i<n;i++)a[i]=(Math.random()*2-1)*(1-i/n);const q=AC.createBufferSource(),e=AC.createGain();q.buffer=b;e.gain.value=v*VOL;q.connect(e);e.connect(AC.destination);q.start(t+at)};
+const mv=(at=0)=>{tn(190,.09,"triangle",.6,at,90);nz(.03,.3,at)};
+const FX={move:()=>mv(),castle:()=>{tn(105,.18,"triangle",.9,0,55);nz(.06,.45);mv(.17);tn(150,.15,"triangle",.7,.2,70);nz(.04,.35,.2)},capture:()=>{tn(140,.2,"triangle",.8,0,55);nz(.1,.6);tn(320,.05,"square",.12)},check:()=>{tn(660,.12,"square",.16);tn(880,.2,"square",.16,.12)},promo:()=>[440,660,880].forEach((f,i)=>tn(f,.14,"triangle",.4,i*.09)),win:()=>[523,659,784,1047].forEach((f,i)=>tn(f,.25,"triangle",.5,i*.14)),lose:()=>[392,330,262,196].forEach((f,i)=>tn(f,.3,"triangle",.5,i*.18)),draw:()=>{tn(440,.2,"sine",.4);tn(440,.35,"sine",.4,.22)},tick:()=>tn(900,.04,"sine",.25)};
+FX[k]&&FX[k]()}catch(e){}}
+LV.push({elo:450,d:1,n:300,s:{cn:3,adv:5,ks:0,ak:0,mv:1.5}},{elo:650,d:1,n:150,s:{cn:6,adv:4,ks:55,ak:0}},{elo:850,d:2,n:100,s:{cn:13,adv:3,ks:20,ak:0}},{elo:1050,d:2,n:65,s:{cn:5,adv:9,ks:0,ak:6,mv:.6}},{elo:1250,d:2,n:28,s:{cn:6,adv:5,ks:25,ak:0,rk:14}},{elo:1450,d:3,n:38,s:{cn:7,adv:6,ks:15,ak:3,qa:7}},{elo:1650,d:3,n:14,s:{cn:5,adv:6,ks:30,ak:0,mv:1.4}},{elo:1850,d:3,n:0,s:{cn:5,adv:8,ks:15,ak:8,mv:.8}});
+BI.push(
+{n:"Tula",a:{bg:"#f7a8b8",skin:"#f1c9a5",hair:"#ff8c42",hs:3,top:"#8e44ad",ex:1},say:{hi:"Hola! Menjo totes les peces que pugui!",lost:"Ei! Això no s’hi val!|Torna’m la peça!",took:"Nyam nyam!|Més peces per a mi!",chk:"Escac? Però si jo volia menjar!",win:"He menjat més que tu!",lose:"M’has pres massa peces...",draw:"Taules? Encara tinc gana."}},
+{n:"Joan",a:{bg:"#9ec5e8",skin:"#d9a77a",hair:"#3a2a20",hs:1,top:"#34495e",ex:3,gl:1},say:{hi:"Jugarem a poc a poc, sense riscos.",lost:"Ho tenia protegit... o no?|Quin canvi tan ràpid.",took:"Només si és segur.",chk:"Escac! Vull defensar-me bé.",win:"La prudència guanya partides.",lose:"M’he descuidat una mica.",draw:"Taules. Millor que arriscar."}},
+{n:"Aina",a:{bg:"#f6d186",skin:"#f3cfae",hair:"#14202a",hs:4,top:"#2e8b57",ex:0},say:{hi:"El centre és el meu territori.",lost:"M’has pres una peça, però el centre és meu.|Ep, aquesta guardava el centre!",took:"Fora de la meva zona!",chk:"Escac. S’ha trencat el centre?",win:"Qui controla el centre guanya.",lose:"Has pres el centre. Bona feina.",draw:"Taules, i el centre és de tots."}},
+{n:"Biel",a:{bg:"#e07a5f",skin:"#e9b894",hair:"#6b3e26",hs:2,top:"#3d405b",ex:1},say:{hi:"Et regalaré una peça. O potser dues.",lost:"Perfecte, tot segons el pla!|Aquest sacrifici era buscat.",took:"Un regal... d’ells.",chk:"Escac? Doncs el sacrifici ha funcionat.",win:"El sacrifici ho ha pagat tot!",lose:"El sacrifici no ha anat bé.",draw:"Taules? Quin avorriment."}},
+{n:"Carla",a:{bg:"#81b29a",skin:"#8d5a3b",hair:"#f2cc8f",hs:3,top:"#3d405b",ex:0},say:{hi:"Les meves torres ja tenen ganes de córrer.",lost:"Les torres encara hi són.|Una peça menys, però les torres segueixen.",took:"Torre per davant!",chk:"Escac a la columna oberta!",win:"Les torres manen.",lose:"Les torres han arribat tard.",draw:"Taules. Les torres es queden quietes."}},
+{n:"Oriol",a:{bg:"#6d6875",skin:"#f0c8a4",hair:"#b5838d",hs:1,top:"#e5989b",ex:2,gl:1},say:{hi:"La meva dama surt primer, sempre.",lost:"No toquis la dama... bé, una peça.|Això no és la dama, no passa res.",took:"La dama ho ha vist tot.",chk:"Escac. La dama té plans.",win:"La dama sempre guanya.",lose:"La dama ha perdut aquesta vegada.",draw:"Taules. La dama vol més."}},
+{n:"Mireia",a:{bg:"#b8c0ff",skin:"#e7bd9a",hair:"#2a1a14",hs:4,top:"#5e60ce",ex:3},say:{hi:"Compto cada peça. Totes són importants.",lost:"Perdre material, quin disgust!|Això em costa un punt de material.",took:"Material guanyat. Comptabilitzat.",chk:"Escac. Que no em tregui material.",win:"Tenia més material, ho tenia clar.",lose:"M’has guanyat el material, i la partida.",draw:"Taules. Material igualat."}},
+{n:"Roc",a:{bg:"#264653",skin:"#d9a77a",hair:"#14202a",hs:0,top:"#e76f51",ex:2,bd:1},say:{hi:"Sense pietat. A atacar!",lost:"Perdre una peça no m’atura.|Aviat t’ho tornaré, amb interessos.",took:"Un obstacle menys!",chk:"Escac? Contraatac!",win:"Atac total. Victòria total.",lose:"Has resistit. Respecte.",draw:"Taules? No m’has deixat acabar."}});
+AX.push({eye:"#2b6cb0",er:"#fff"},{eye:"#3b2a1a"},{eye:"#2e8b57",er:"#fff"},{eye:"#3d405b",hp:"#e07a5f"},{eye:"#3b2a1a",sc:"#e07a5f",er:"#f2b84b"},{eye:"#b5838d"},{eye:"#3b2a1a",er:"#f2b84b",sc:"#5e60ce"},{eye:"#e76f51",mu:1});
+const ORD=LV.map((_,i)=>i).sort((a,b)=>LV[a].elo-LV[b].elo);
+BT.push(["#fbe9e7","#e57373"],["#e0f2f1","#00897b"],["#fff3cd","#c49a3a"],["#cfd8dc","#455a64"]);
+PS.push({w:"#ffb3c7",b:"#6b1d3a",sw:"0 0 2px #6b1d3a,0 1px 1px #6b1d3a",sb:"0 0 2px #ffb3c7"},{w:"#c8f7c5",b:"#1f5f3a",sw:"0 0 2px #1f5f3a,0 1px 1px #1f5f3a",sb:"0 0 2px #c8f7c5"},{w:"#fff",b:"#c0392b",sw:"0 0 2px #000,0 0 2px #000",sb:"0 0 2px #000,0 0 2px #000"},{w:"#ffe08a",b:"#7a1fa2",sw:"0 0 2px #5a4300,0 1px 1px #5a4300",sb:"0 0 3px #ffe08a"});
+const HC=["#f2b84b","#7bd88f","#5bc0ff","#ff7eb6","#ff7a45"],GF={...GL},GH={k:"♔",q:"♕",r:"♖",b:"♗",n:"♘",p:"♙"};
+let CO=1,HN=1,ANI=1,PZ=1,TH=0,HI=0,HOL=0,CF=null;
+try{const o=JSON.parse(localStorage.getItem("escacs-op")||"{}");CO=o.co??1;HN=o.hn??1;ANI=o.an??1;PZ=o.pz??1;TH=o.th||0;HI=o.hi||0;HOL=o.ho||0}catch(e){}
+function show(id){for(const x of["home","start","cust"])$(x).hidden=x!==id}
+function applyOpt(){const d=document.documentElement,r=d.style,t=BT[ob],p=PS[op];
+r.setProperty("--bl",t[0]);r.setProperty("--bd",t[1]);r.setProperty("--pw",p.w);r.setProperty("--pb",p.b);r.setProperty("--sw",p.sw);r.setProperty("--sb",p.sb);r.setProperty("--hi",HC[HI]);r.setProperty("--pz",PZ);
+if(TH)d.dataset.theme=TH===1?"light":"dark";else delete d.dataset.theme;
+Object.assign(GL,HOL?GH:GF);
+$("board").classList.toggle("nc",!CO);$("board").classList.toggle("nh",!HN);
+$("bt").innerHTML=BT.map((t,i)=>`<button class="sw" data-i="${i}" aria-pressed="${i===ob}" aria-label="Tauler ${i+1}"><i style="background:${t[0]}"></i><i style="background:${t[1]}"></i><i style="background:${t[1]}"></i><i style="background:${t[0]}"></i></button>`).join("");
+$("pt").innerHTML=PS.map((p,i)=>`<button class="pk" data-i="${i}" aria-pressed="${i===op}" aria-label="Peces ${i+1}"><span style="color:${p.w};text-shadow:${p.sw}">${GL.n}\uFE0E</span><span style="color:${p.b};text-shadow:${p.sb}">${GL.n}\uFE0E</span></button>`).join("");
+$("hl").innerHTML=HC.map((c,i)=>`<button class="hc" style="background:${c}" data-i="${i}" aria-pressed="${i===HI}" aria-label="Color ${i+1}"></button>`).join("");
+$("sh").innerHTML=["Massissa","Buida"].map((n,i)=>`<button class="sm" data-i="${i}" aria-pressed="${i===HOL}">${n}</button>`).join("");
+$("th").innerHTML=["Auto","Clar","Fosc"].map((n,i)=>`<button class="sm" data-i="${i}" aria-pressed="${i===TH}">${n}</button>`).join("");
+$("sn").checked=SND;$("vl").value=VOL;$("co").checked=!!CO;$("hn").checked=!!HN;$("an").checked=!!ANI;$("pz").value=PZ;
+$("pv").innerHTML=[["K","w"],["q","b"],["N","w"],["b","b"],["R","w"],["p","b"]].map(([l,c],i)=>`<div class="s ${i%2?"d":"l"}${i===2?" last":""}${i===4?" t":""}"><span class="p ${c}">${GL[l.toLowerCase()]}\uFE0E</span></div>`).join("");
+try{localStorage.setItem("escacs-op",JSON.stringify({b:ob,p:op,s:SND,v:VOL,co:CO,hn:HN,an:ANI,pz:PZ,th:TH,hi:HI,ho:HOL}))}catch(e){}
+if(st)render()}
+const pick=(id,f)=>{$(id).onclick=e=>{const b=e.target.closest("button");if(b){f(+b.dataset.i);applyOpt();snd("tick")}}};
+pick("hl",i=>HI=i);pick("sh",i=>HOL=i);pick("th",i=>TH=i);
+$("pz").oninput=()=>{PZ=+$("pz").value;applyOpt()};
+$("co").onchange=()=>{CO=$("co").checked?1:0;applyOpt()};
+$("hn").onchange=()=>{HN=$("hn").checked?1:0;applyOpt()};
+$("an").onchange=()=>{ANI=$("an").checked?1:0;applyOpt()};
+function menu(){rows();$("lvs").innerHTML=ORD.map(i=>`<button data-l="${i+1}"><span class="pa">${avatar({...BI[i].a,...AX[i]})}</span><span class="t"><b>${LV[i].elo}</b><small>${BI[i].n}</small></span></button>`).join("");show("start")}
+let ME="w",MODE=0,COL=0,TI=0,TL=0,clk=[0,0],tick=null,RK={K:63,Q:56,k:7,q:0},KS={w:60,b:4};
+const MN=["Clàssic","Escacs 960","Rei a la muntanya","Tres escacs"],MD=["Escacs de sempre.","Posició inicial aleatòria. Per enrocar, clica el rei i després la torre.","Guanyes si el teu rei arriba al centre (d4, e4, d5, e5).","Guanyes si dones tres escacs al rei rival."],di=s=>ME==="w"?s:63-s;
+function back960(){const a=Array(8).fill(""),fr=()=>a.map((x,i)=>x?-1:i).filter(i=>i>=0),put=(c,l)=>{const f=l||fr();a[f[Math.random()*f.length|0]]=c};put("b",[1,3,5,7]);put("b",[0,2,4,6]);put("q");put("n");put("n");const f=fr();a[f[0]]="r";a[f[1]]="k";a[f[2]]="r";return a}
+function cast(st,w,out,add){const b=st.b,en=w?"b":"w",h=w?56:0,ks=KS[w?"w":"b"],R=w?"R":"r";
+for(const sd of["K","Q"]){const key=w?sd:sd.toLowerCase();if(!st.c[key])continue;const rs=RK[key],kt=h+(sd==="K"?6:2),rt=h+(sd==="K"?5:3);if(b[rs]!==R)continue;let ok=1;
+const lo=Math.min(ks,kt,rs,rt),hi=Math.max(ks,kt,rs,rt);
+for(let q=lo;q<=hi;q++)if(b[q]&&q!==ks&&q!==rs)ok=0;
+for(let q=Math.min(ks,kt);q<=Math.max(ks,kt);q++)if(att(b,q,en))ok=0;
+if(ok)add(ks,kt,{c:1,rs,rt})}}
+function vwin(p,chk){const w=isW(p),i=w?0:1;st.k3=(hist[hist.length-1].st.k3||[0,0]).slice();
+if(MODE===3&&chk&&++st.k3[i]>=3)over=w?"w":"b";
+if(MODE===2&&[27,28,35,36].includes(st.b.indexOf(w?"K":"k")))over=w?"w":"b";if(MODE===9){const k=st.b.indexOf(w?"K":"k");if(w?k<8:k>55)over=w?"w":"b"}}
+const fmt=s=>{if(s<=0)return"0:00.000";if(s<9.9995)return"0:0"+s.toFixed(3);s=Math.ceil(s);return(s/60|0)+":"+String(s%60).padStart(2,"0")};
+function clkRender(){$("clk").textContent=TL?`Tu ${fmt(clk[ME==="w"?0:1])} · ${BI[lv-1].n} ${fmt(clk[ME==="w"?1:0])}`:""}
+function clkStart(){clearInterval(tick);TL=TB[TI];clk=[TL,TL];clkRender();if(!TL)return;let t0=Date.now();
+tick=setInterval(()=>{const n=Date.now(),d=(n-t0)/1000;t0=n;if(over){clearInterval(tick);return}const i=st.turn==="w"?0:1;clk[i]-=d;clkRender();CT(i);
+if(clk[i]<=0){clearInterval(tick);over=i===0?"b":"w";note=(over===ME?"Has guanyat":"Has perdut")+" pel temps.";snd(over===ME?"win":"lose");sayEv(over===ME?"lose":"win");render()}},50)}
+function rows(){const R=(id,arr,cur,f)=>{$(id).innerHTML=arr.map((n,i)=>`<button class="sm" data-i="${i}" aria-pressed="${i===cur}">${n}</button>`).join("");$(id).onclick=e=>{const b=e.target.closest("button");if(b){f(+b.dataset.i);rows()}}};
+R("md",MN,MODE,i=>MODE=i);R("cl",["Blanques","Negres","Aleatori"],COL,i=>COL=i);R("tm",TN,TI,i=>TI=i);$("mdd").textContent=MD[MODE]}
+LV.push({elo:4060,d:3,n:0,s:{cn:6,adv:7,ks:40,ak:3,qa:3,rk:5}},{elo:900,d:2,n:90,s:{cn:4,adv:10,ks:0,ak:7,mv:.7}},{elo:1100,d:2,n:55,s:{cn:9,adv:6,ks:30,ak:2,qa:5}},{elo:1500,d:3,n:35,s:{cn:6,adv:8,ks:20,ak:4,rk:6}},{elo:1,d:1,n:100000,s:{cn:0,adv:0,ks:0,ak:0}});
+BI.push(
+{n:"Stonkfish",a:{fish:1,bg:"#0b3d2e"},say:{hi:"Compro la teva torre. To the moon!",lost:"Aquesta peça pujava... i ha baixat.|Stonks! (bé, baixen)",took:"Stonks! Torre a la cartera.|Operació completada.",chk:"Escac? Això és una correcció de mercat.",win:"Venc el teu rei amb un benefici del 300%.",lose:"He perdut. Cridaré el meu gestor.",draw:"Taules: el mercat està lateral."}},
+{n:"Pirata",a:{bg:"#2a6f97",skin:"#d9a77a",hair:"#3a2a20",hs:0,top:"#7b2d26",ex:1,bd:1,ep:1,bn:1},say:{hi:"Arrr! Prepara’t per a l’abordatge!",lost:"Per les sirenes! Una peça menys!|Arrr, aquesta era del meu botí!",took:"Al botí amb ella!|Yo-ho-ho!",chk:"Escac?! Ets un pirata de debò!",win:"Arrr! El teu rei dorm amb els peixos.",lose:"Em retiro... al fons del mar.",draw:"Taules? Ni el rom m’ho arregla."}},
+{n:"Furro",a:{fox:1,bg:"#ffd6e7"},say:{hi:"Hola! UwU, juguem?",lost:"Owo! Ets massa dolent amb mi!|Aiii, la meva peça! >w<",took:"Nyaa! Peça capturada!|UwU, gràcies!",chk:"Escac?! Em poso vermell... ^//^",win:"Yay! He guanyat! *mou la cua*",lose:"Awww... bona partida, amic!",draw:"Taules! Una abraçada?"}},
+{n:"Rafael",a:{bg:"#dfe6ea",skin:"#d8a883",hair:"#8c8c8c",hs:0,top:"#14181c",ex:3,gl:1,bd:1,fc:1,pl:1,rm:1},say:{hi:"Hola, sóc el Rafael. Que comenci la partida!",lost:"Bona jugada, no m’ho esperava.|Ho tenia controlat... crec.",took:"Gràcies per la peça!",chk:"Escac. Ho tinc vist.",win:"Bona partida, però ha guanyat el Rafael.",lose:"Enhorabona, has guanyat.",draw:"Taules, bon duel."}},
+{n:"Patata",a:{bg:"#cfd8dc",skin:"#c8a46e",hair:"#c8a46e",hs:0,top:"#8d6e63",ex:4},say:{hi:"Bip. Sóc una patata.",lost:"...?|Bip.",took:"Per accident!",chk:"Què és un escac?",win:"No sé com, però he guanyat.",lose:"És lògic.",draw:"Taules? Què és això?"}});
+AX.push({},{eye:"#3b2a1a"},{},{eye:"#3b2a1a"},{});
+ORD.push(16,17,18,19,20);ORD.sort((a,b)=>LV[a].elo-LV[b].elo);
+const fishSvg=c=>`<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" fill="${c.bg}"/><g fill="#2ecc71"><rect x="6" y="46" width="6" height="12"/><rect x="16" y="40" width="6" height="18"/><rect x="26" y="50" width="6" height="8" fill="#e74c3c"/></g><path d="M52 16l8 9h-5v9h-6v-9h-5z" fill="#2ecc71"/><path d="M12 36L1 25v22z" fill="#3a86bf"/><ellipse cx="34" cy="36" rx="21" ry="14" fill="#4aa3df"/><ellipse cx="34" cy="42" rx="15" ry="7" fill="#bfe3f7" opacity=".6"/><path d="M26 24l9-9 9 9z" fill="#3a86bf"/><rect x="33" y="29" width="18" height="8" rx="3" fill="#111"/><path d="M36 31h6" stroke="#fff" stroke-opacity=".6" stroke-width="1.5"/><path d="M41 45q5 3 10 0" fill="none" stroke="#12476b" stroke-width="2" stroke-linecap="round"/><text x="22" y="40" font-size="10" fill="#fff" font-family="sans-serif" font-weight="700">$</text></svg>`;
+const foxSvg=c=>`<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" fill="${c.bg}"/><path d="M8 3l6 24 13-9z" fill="#7b5cff"/><path d="M56 3l-6 24-13-9z" fill="#7b5cff"/><path d="M12 9l3 12 7-5zM52 9l-3 12-7-5z" fill="#ff9ec7"/><ellipse cx="32" cy="37" rx="21" ry="19" fill="#7b5cff"/><path d="M11 40l-6 5 8 1zM53 40l6 5-8 1z" fill="#7b5cff"/><path d="M32 18q-6 6 0 13q6-7 0-13z" fill="#5a3fd6"/><ellipse cx="32" cy="46" rx="12" ry="9" fill="#f4ecff"/><ellipse cx="22.5" cy="34" rx="5.2" ry="6.2" fill="#fff"/><ellipse cx="41.5" cy="34" rx="5.2" ry="6.2" fill="#fff"/><ellipse cx="23" cy="35" rx="3.5" ry="4.5" fill="#27d3c3"/><ellipse cx="41" cy="35" rx="3.5" ry="4.5" fill="#27d3c3"/><ellipse cx="23" cy="35.4" rx="1.8" ry="2.7" fill="#102a43"/><ellipse cx="41" cy="35.4" rx="1.8" ry="2.7" fill="#102a43"/><circle cx="24.2" cy="33" r="1.3" fill="#fff"/><circle cx="42.2" cy="33" r="1.3" fill="#fff"/><path d="M17 27q5-3 10 0M37 27q5-3 10 0" stroke="#2b2140" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M28 41h8l-4 4z" fill="#2b2140"/><path d="M32 45v2M26.5 47q2.8 3 5.5 0q2.8 3 5.5 0" stroke="#2b2140" stroke-width="1.4" fill="none" stroke-linecap="round"/><path d="M30 49q2 5 4 0z" fill="#ff6b9a"/><circle cx="14.5" cy="43" r="3" fill="#ff7a9a" opacity=".5"/><circle cx="49.5" cy="43" r="3" fill="#ff7a9a" opacity=".5"/><path d="M8 34q0-26 24-26t24 26" fill="none" stroke="#222" stroke-width="3.5"/><rect x="4" y="28" width="8" height="14" rx="3" fill="#ff5fa2"/><rect x="52" y="28" width="8" height="14" rx="3" fill="#ff5fa2"/><path d="M14 58q18 8 36 0v6H14z" fill="#ff5fa2"/><path d="M14 58q18 8 36 0" stroke="#ffd60a" stroke-width="1.6" fill="none"/><path d="M16 61q16 7 32 0" stroke="#27d3c3" stroke-width="1.6" fill="none"/><path d="M18 36q-1 6 2 8" stroke="#fff" stroke-opacity=".25" fill="none"/></svg>`;
+{const A0=avatar;avatar=function(c){if(c.fish)return fishSvg(c);if(c.fox)return foxSvg(c);let x="";if(c.pl)x+=`<path d="M24 47l8 8 8-8" fill="none" stroke="#3a4048" stroke-width="2.2"/><rect x="31" y="50" width="2" height="9" fill="#3a4048"/>`;if(c.fc)x+=`<path d="M17 21c0-8 6-12 15-12s15 4 15 12z" fill="#7a7f85"/><path d="M15 22c6-3 12 1 18 1s11-4 17-1l-2 3H17z" fill="#5f646a"/><path d="M21 13q11-5 22 0" stroke="#fff" stroke-opacity=".25" stroke-width="1.5" fill="none"/><circle cx="32" cy="9.6" r="1.3" fill="#4a4e53"/>`;if(c.bn)x+=`<path d="M16 20q16-8 32 0v5q-16-6-32 0z" fill="#c0392b"/><circle cx="50" cy="22" r="2" fill="#c0392b"/>`;if(c.ep)x+=`<path d="M12 21L52 17" stroke="#111" stroke-width="2.2"/><path d="M26 24q-7 1-7 7t7 8q7-1 7-8t-7-7z" fill="#0a0a0a" stroke="#444" stroke-width="1.2"/><path d="M21 28q3-4 7-2" stroke="#fff" stroke-opacity=".3" stroke-width="1.4" fill="none"/>`;x+=DET;let s=A0(c);if(c.rm)s=s.replace('<rect width="64" height="64" fill="url(','<path d="M46 10v34M54 8v36M42 24h18M42 34h18" stroke="#6b7a86" stroke-width="1.6" opacity=".7"/><rect x="0" y="46" width="64" height="18" fill="#b9c4cc" opacity=".6"/><rect width="64" height="64" fill="url(');return s.replace("</svg>",x+"</svg>")}}
+let ANM=0,AN=null,BMV=null,EG=0,FLAG=0,TR=0,TS=0,TD=0,TP=null,TIX=0,trTab=0,TRS=[];
+try{TRS=JSON.parse(localStorage.getItem("escacs-tr")||"[]")}catch(e){}
+const LVN=["Bàsic","Intermedi","Avançat"],CL=["Millor","Excel·lent","Bona","Imprecisió","Error","Error greu"],CC=["#2e9e5b","#4fb06d","#7bb35b","#e0b030","#e8782f","#d9534f"];
+const LS=[
+[1,"Com es mouen les peces","La torre va en recte, l’alfil en diagonal, la dama fa les dues coses i el rei només una casella. El cavall salta en forma de L i és l’única peça que pot passar per sobre d’altres. Els peons avancen d’una casella i capturen en diagonal.","8/8/8/8/4N3/8/8/8",["d6","f6","c5","g5","c3","g3","d2","f2"]],
+[1,"El valor de les peces","Peó = 1, cavall = 3, alfil = 3, torre = 5, dama = 9. Serveix per saber si un canvi t’interessa: una torre per un cavall i un peó és un mal canvi. El rei no té valor perquè no es pot perdre."],
+[1,"Escac i escac mat","Hi ha escac quan el rei està atacat. Has de sortir-ne: moure el rei, tapar l’atac o capturar l’atacant. Si no pots, és mat i la partida s’acaba. Si no és escac però no tens cap jugada legal, són taules per rei ofegat.","6k1/5ppp/8/8/8/8/8/R3K3",["a8"]],
+[1,"Enroc i captura al pas","L’enroc mou el rei dues caselles cap a una torre i la torre salta al seu costat. Només es pot si ni el rei ni la torre s’han mogut, no hi ha peces entremig i el rei no passa per cap casella atacada. Captura al pas: si un peó avança dues caselles i queda al costat d’un peó rival, aquest el pot capturar només en el torn immediat."],
+[1,"Principis d’obertura","Domina el centre amb peons, desenvolupa cavalls i alfils abans que la dama, enroca aviat i no moguis la mateixa peça dues vegades sense motiu. Quan acabis, connecta les torres."],
+[2,"La forquilla","Una forquilla és un atac doble: una peça n’ataca dues alhora i l’adversari només en pot salvar una. Els cavalls són els millors per a això, sobretot si un dels objectius és el rei.","r3k3/8/8/3N4/8/8/8/4K3",["c7","a8","e8"]],
+[2,"La clavada","Una peça clavada no es pot moure sense deixar una peça més valuosa (o el rei) a l’atac. Ataca les peces clavades amb peons o amb més peces: no es poden defensar movent-se.","4k3/8/2n5/1B6/8/8/8/4K3",["b5","c6","e8"]],
+[2,"L’enfilada","És com una clavada al revés: ataques la peça valuosa i, quan es mou, captures la que hi ha al darrere. Les torres, els alfils i la dama la poden fer.","3q4/8/8/3k4/8/8/8/3R2K1",["d1","d5","d8"]],
+[2,"L’atac descobert","Mous una peça i deixes al descobert l’atac d’una altra que hi havia al darrere. Si la peça que mous fa escac o amenaça alguna cosa, tens dues amenaces alhora."],
+[2,"El mat del passadís","Quan el rei té els peons al davant, una torre o una dama a la darrera fila dóna mat. Crea una escapada (una “finestreta”) amb h3 o g3 aviat per evitar-ho.","6k1/5ppp/8/8/8/8/8/R3K3",["a8","g8"]],
+[3,"Peons passats i oposició","Un peó passat no té peons rivals que el frenin. En finals de rei i peó, tenir l’oposició (reis cara a cara amb una casella al mig i el torn a l’altre bàndol) decideix si el peó corona."],
+[3,"Torre a la setena fila","Una torre a la setena fila ataca els peons i confina el rei rival. Dues torres allà sovint donen escac perpetu o mat. En finals de torres, mantén-les actives i darrere dels peons passats."],
+[3,"Estructura de peons","Els peons aïllats, doblats o endarrerits són debilitats. Una cadena de peons és sòlida si defenses la base. Tria el pla segons l’estructura: ataca les debilitats rivals i protegeix les pròpies."],
+[3,"Sacrificis de desviació","A vegades val la pena sacrificar material per desviar una peça defensora i guanyar-ne una de molt més valuosa, o per obrir el rei rival. Calcula sempre què passa si l’adversari rebutja el sacrifici."],
+[3,"Zugzwang i tempo","Hi ha zugzwang quan qualsevol jugada que facis empitjora la teva posició. És habitual en finals. Aprèn a perdre un tempo amb una jugada d’espera per passar-li el torn a l’adversari."]];
+const PZL=[{f:"6kr/r7/1p1p1pp1/4N2p/1p1pP1bP/2bP2P1/n1q2PBQ/3R1K1R b - -",v:1,k:"m1",t:"Mat en 1"},{f:"2k5/8/5Q2/2p2p2/3np1p1/r4b1p/7r/4K3 b - -",v:1,k:"m1",t:"Mat en 1"},{f:"3k4/2R5/N1B1P3/p7/P6r/8/4K3/8 w - -",v:1,k:"m1",t:"Mat en 1"},{f:"2Q5/k7/P1R3p1/7p/4p2P/6r1/K7/8 w - -",v:1,k:"m1",t:"Mat en 1"},{f:"8/2r5/2p5/p1P4k/P7/3b3p/2q5/K7 b - -",v:1,k:"m1",t:"Mat en 1"},{f:"r1bR1bk1/p1p5/1p2N2r/1P2n1N1/2P4p/5P1P/P3K1P1/5BR1 w - -",v:1,k:"m1",t:"Mat en 1"},{f:"q3k2r/1pp1n3/r1npbpp1/p3p2p/Pb2P2P/2NPBN2/1PP1QPP1/1R2KB1R b - -",v:2,k:"t",s:["e6g4"],t:"Guanya material"},{f:"rnb3nr/1pp1k1pp/p4p2/4p3/1b6/1BN5/PPPP1PPP/R1B1K1NR w - -",v:2,k:"t",s:["c3d5"],t:"Guanya material"},{f:"r1bqkb1r/1pp1n3/2np2p1/1p2Pp1p/PP5P/R1BP4/2P1P1P1/3QKBNR w - -",v:2,k:"t",s:["e5d6"],t:"Guanya material"},{f:"3q1b1r/rp1nk1p1/p1pppn1p/8/b1PP1NPP/3BPP1Q/PP1N4/R1B1K2R w - -",v:2,k:"t",s:["f4g6"],t:"Guanya material"},{f:"r4b1r/p3kp1p/Q7/3p3p/1P4n1/3P4/Pn2NP2/R4KR1 w - -",v:2,k:"t",s:["a6b7"],t:"Guanya material"},{f:"2k5/8/8/2p1ppQ1/3n2pp/r4b2/2r5/4K3 b - -",v:3,k:"m2",s:["a3a1"],t:"Mat en 2"},{f:"8/k7/PR2Q1p1/7p/7P/1K2p1r1/8/8 w - -",v:3,k:"m2",s:["b6b7"],t:"Mat en 2"},{f:"r1bq2k1/p1p5/1p2N2r/1P2n1N1/1bP4p/5P1P/P3K1P1/3R1BR1 w - -",v:3,k:"m2",s:["d1d8"],t:"Mat en 2"},{f:"8/3k4/4p3/p5p1/2p1b3/6q1/8/2K5 b - -",v:3,k:"m2",s:["g3c3"],t:"Mat en 2"}];
+function show(id){for(const x of["home","start","cust","endg","trn"])$(x).hidden=x!==id}
+function parseB(f){const b=[];for(const ch of f.split(" ")[0]){if(ch==="/")continue;if(/\d/.test(ch))for(let i=0;i<+ch;i++)b.push("");else b.push(ch)}while(b.length<64)b.push("");return b}
+function fromFen(f){const p=f.split(" ");return{b:parseB(f),turn:p[1]||"w",c:{K:0,Q:0,k:0,q:0},ep:-1,hm:0,k3:[0,0]}}
+function dia(fen,hl){const b=parseB(fen),H=(hl||[]).map(q=>"abcdefgh".indexOf(q[0])+(8-+q[1])*8);return`<div class="dg">`+b.map((x,s)=>`<div class="s ${((s>>3)+(s&7))%2?"d":"l"}${H.includes(s)?" last":""}">${x?`<span class="p ${isW(x)?"w":"b"}">${GL[x.toLowerCase()]}\uFE0E</span>`:""}</div>`).join("")+"</div>"}
+function matRender(){if(TR){$("mat").innerHTML="";return}const V={p:1,n:3,b:3,r:5,q:9},I={p:8,n:2,b:2,r:2,q:1},cn={w:{},b:{}};let sw=0,sb=0;
+for(const x of st.b){if(!x)continue;const l=x.toLowerCase(),w=isW(x),k=w?"w":"b";cn[k][l]=(cn[k][l]||0)+1;if(w)sw+=V[l]||0;else sb+=V[l]||0}
+const cap=c=>`<span class="p ${c}">`+["q","r","b","n","p"].map(l=>(GL[l]+"\uFE0E").repeat(Math.max(0,I[l]-(cn[c][l]||0)))).join("")+"</span>",e=ME==="w"?"b":"w",d=(sw-sb)*(ME==="w"?1:-1);
+$("mat").innerHTML=`<div><span>${PN}</span><span class="cp">${cap(e)}</span>${d>0?`<b>+${d}</b>`:""}</div><div><span>${BI[lv-1].n}</span><span class="cp">${cap(ME)}</span>${d<0?`<b>+${-d}</b>`:""}</div>`}
+function clkRender(){const c=$("clk");c.hidden=!TL||TR;if(!TL||TR){c.innerHTML="";return}const a=st.turn===ME&&!over,r=st.turn!==ME&&!over,bx=(n,t,on)=>`<div class="cb${on?" on":""}${t<10?" lo":""}"><small>${n}</small><b>${fmt(t)}</b></div>`;
+c.innerHTML=bx(BI[lv-1].n,clk[ME==="w"?1:0],r)+bx(PN,clk[ME==="w"?0:1],a)}
+function clkStart(){clearInterval(tick);TL=TB[TI];clk=[TL,TL];clkRender();if(!TL)return;let t0=Date.now();
+tick=setInterval(()=>{const n=Date.now(),d=(n-t0)/1000;t0=n;if(over||ANM||TR){clearInterval(tick);return}const i=st.turn==="w"?0:1;clk[i]-=d;clkRender();CT(i);
+if(clk[i]<=0){clearInterval(tick);FLAG=1;over=i===0?"b":"w";note=(over===ME?"Has guanyat":"Has perdut")+" pel temps.";snd(over===ME?"win":"lose");sayEv(over===ME?"lose":"win");render()}},50)}
+function showEnd(){const w=over===ME,d=over==="d";let why="Escac i mat";
+if(DRW&&d)why="Taules acordades";else if(REPD&&d)why="Repetició de posició";else if(FLAG)why=FLAG===2?"Abandonament":"Temps esgotat";else if(d)why=!legal(st).length?"Rei ofegat":st.hm>=100?"Regla dels 50 moviments":"Material insuficient";
+else if(MODE===2&&[27,28,35,36].includes(st.b.indexOf(over==="w"?"K":"k")))why="El rei ha arribat al centre";
+else if(MODE===3&&st.k3&&st.k3[over==="w"?0:1]>=3)why="Tres escacs";if(MODE===9&&!FLAG&&!d&&!(inCheck(st)&&!legal(st).length))why="El rei ha arribat a l’altre costat";
+$("eh").textContent=d?"Taules":w?"Has guanyat!":"Has perdut";$("es").textContent=why+" · contra "+BI[lv-1].n+" (Elo "+LV[lv-1].elo+")";$("ea").innerHTML=avatar({...BI[lv-1].a,...AX[lv-1]});show("endg")}
+function startAnalysis(){ANM=1;TR=0;sel=null;lms=[];const n=hist.length,POS=hist.map(h=>h.st).concat([st]),MV=hist.map(h=>h.m);
+AN={POS,MV,nm:moves.slice(),ev:[0],cls:[],bm:[],loss:[],bn:[],k:0};$("ana").hidden=false;$("ang").hidden=true;$("anp").hidden=false;$("anp").textContent="Analitzant… 0/"+n;render();
+if($("ana").scrollIntoView)$("ana").scrollIntoView({behavior:"smooth"});
+const S0=S;S={cn:5,adv:7,ks:25,ak:0};let i=0;
+const step=()=>{if(!ANM){S=S0;return}if(i>=n){S=S0;anFin();return}
+const s=POS[i],m=MV[i];let best=-1e9,bm=null,pv=null;
+for(const x of legal(s)){const c=apply(s,x),v=legal(c).length?-qs(c,-1e9,1e9,3):(inCheck(c)?40000:0);if(v>best){best=v;bm=x}if(x.f===m.f&&x.t===m.t&&x.pr==m.pr&&x.c==m.c)pv=v}
+if(pv===null)pv=best;const loss=Math.max(0,best-pv),same=bm.f===m.f&&bm.t===m.t&&bm.pr==m.pr;
+AN.loss.push(loss);AN.cls.push(same?0:loss<=8?1:loss<=35?2:loss<=90?3:loss<=220?4:5);AN.bm.push(same?null:bm);AN.bn.push(same?"":name(bm,s.b[bm.f],s.b[bm.t]||bm.e));
+AN.ev.push(Math.max(-600,Math.min(600,s.turn==="w"?pv:-pv)));i++;$("anp").textContent="Analitzant… "+i+"/"+n;setTimeout(step,0)};
+setTimeout(step,30)}
+function anFin(){const n=AN.MV.length;$("anp").hidden=true;$("ang").hidden=false;
+const side=par=>{let a=0,t=0;const c=[0,0,0,0,0,0];AN.loss.forEach((l,i)=>{if(i%2===par){a+=Math.min(l,600);t++;c[AN.cls[i]]++}});return`<b>${t?Math.round(100*Math.exp(-(a/t)/120)):100}%</b>precisió<br>${c[0]} millors · ${c[3]} imprecisions · ${c[4]} errors · ${c[5]} errors greus`},me=ME==="w"?0:1;
+$("ans").innerHTML=`<div><small>${PN}</small>${side(me)}</div><div><small>${BI[lv-1].n}</small>${side(1-me)}</div>`;
+const W=560,pts=AN.ev.map((e,i)=>`${(i/Math.max(1,n)*W).toFixed(1)},${(45-e/600*40).toFixed(1)}`).join(" ");
+$("gr").innerHTML=`<line x1="0" y1="45" x2="${W}" y2="45" stroke="currentColor" opacity=".3"/><polyline points="${pts}" fill="none" stroke="#2b8be0" stroke-width="2.5" vector-effect="non-scaling-stroke"/>`;
+$("anl").innerHTML=AN.nm.map((x,i)=>`<button data-k="${i+1}"><i style="background:${CC[AN.cls[i]]}"></i>${i%2?"":(i/2+1)+". "}${x}</button>`).join("");rv(0)}
+function rv(k){AN.k=k;st=AN.POS[k];last=k?AN.MV[k-1]:null;BMV=k?AN.bm[k-1]:null;sel=null;lms=[];const c=k?AN.cls[k-1]:-1;
+$("ani").innerHTML=k?`<span style="color:${CC[c]}">●</span> ${Math.ceil(k/2)}${k%2?".":"…"} ${AN.nm[k-1]} — ${CL[c]}${BMV?`. Millor: ${AN.bn[k-1]}`:""} · Avaluació ${AN.ev[k]>0?"+":""}${(AN.ev[k]/100).toFixed(1)}`:"Posició inicial (avaluació des del punt de vista de les blanques)";
+for(const b of $("anl").children)b.classList.toggle("cur",+b.dataset.k===k);note="";render()}
+function trList(){$("trt").innerHTML=["Lliçons","Problemes"].map((n,i)=>`<button class="sm" data-i="${i}" aria-pressed="${i===trTab}">${n}</button>`).join("");let h="";
+for(let g=1;g<=3;g++){h+=`<h4>Nivell ${g} · ${LVN[g-1]}</h4>`;if(trTab===0)LS.forEach((l,i)=>{if(l[0]===g)h+=`<button class="li" data-l="${i}">${l[1]}</button>`});else{h+=`<div class="pg">`;PZL.forEach((p,i)=>{if(p.v===g)h+=`<button class="pn${TRS.includes(i)?" ok":""}" data-p="${i}" aria-label="Problema ${i+1}, ${p.t}">${i+1}</button>`});h+="</div>"}}
+if(trTab)h+=`<p class="mdd">Resolts: ${TRS.length} de ${PZL.length}</p>`;$("trb").innerHTML=h}
+function lesson(i){const l=LS[i];$("trb").innerHTML=`<h4>Nivell ${l[0]} · ${LVN[l[0]-1]}</h4><h3>${l[1]}</h3><p>${l[2]}</p>${l[3]?dia(l[3],l[4]):""}<button class="pri" data-back="1">Enrere</button>`}
+function startPuzzle(i){TR=1;ANM=0;TIX=i;TP=PZL[i];TS=0;TD=0;RK={K:63,Q:56,k:7,q:0};KS={w:60,b:4};st=fromFen(TP.f);ME=st.turn;hist=[];moves=[];last=null;sel=null;lms=[];busy=false;over=null;BMV=null;clearInterval(tick);show(null);$("ana").hidden=true;
+$("av").innerHTML=avatar({bg:"#2e8b57",skin:"#f0c8a4",hair:"#7d7d7d",hs:1,top:"#1c2b36",ex:0,gl:1,eye:"#3b5b7a"});$("bn").textContent="Entrenador";$("be").textContent="Problema "+(i+1)+" · "+TP.t;bub("Troba el millor moviment.");note="";render()}
+function solMv(){return legal(st).filter(m=>{if(TP.k==="m1"||(TP.k==="m2"&&TS===1)){const n=apply(st,m);return!legal(n).length&&inCheck(n)}return TP.s.includes(sqn(m.f)+sqn(m.t))})}
+function trClick(s){if(busy||TD)return;const p=st.b[s];
+if(sel!==null){const m=lms.find(m=>(m.t===s&&m.f!==m.t)||(m.c&&m.rs===s));if(m)return trMove(m)}
+if(p&&isW(p)===(ME==="w")){sel=s;lms=legal(st).filter(m=>m.f===s);snd("tick")}else{sel=null;lms=[]}render()}
+function trMove(m){const ok=solMv().some(x=>x.f===m.f&&x.t===m.t&&x.pr==m.pr&&x.c==m.c);
+if(!ok){sel=null;lms=[];note="No és aquest. Prova un altre moviment.";snd("tick");bub("Mmm, no. Pensa-hi una mica més.");render();return}
+snd(st.b[m.t]?"capture":"move");anim={m,cs:m.t,cap:null,cc:""};st=apply(st,m);last=m;sel=null;lms=[];BMV=null;
+if(TP.k==="m2"&&TS===0){TS=1;busy=true;note="Molt bé! Ara continua.";render();setTimeout(()=>{const r=aiMove(st,8);anim={m:r,cs:r.t,cap:null,cc:""};st=apply(st,r);last=r;busy=false;note="Ara dóna mat!";render()},650);return}
+TD=1;if(!TRS.includes(TIX)){TRS.push(TIX);try{localStorage.setItem("escacs-tr",JSON.stringify(TRS))}catch(e){}}
+note="Correcte! Problema resolt.";snd("win");bub("Molt bé! Ho has trobat.");render()}
+$("ht").onclick=()=>{trTab=0;trList();show("trn")};
+$("trx").onclick=()=>show("home");
+$("trt").onclick=e=>{const b=e.target.closest("button");if(b){trTab=+b.dataset.i;trList()}};
+$("trb").onclick=e=>{const b=e.target.closest("button");if(!b)return;if(b.dataset.back)trList();else if(b.dataset.l!==undefined)lesson(+b.dataset.l);else if(b.dataset.p!==undefined)startPuzzle(+b.dataset.p)};
+$("tp").onclick=()=>{const s=TD?null:solMv()[0];if(s){sel=s.f;lms=[];render()}};
+$("ts").onclick=()=>{const s=TD?null:solMv()[0];if(s){BMV=s;note="Solució: "+name(s,st.b[s.f],st.b[s.t]||s.e);render()}};
+$("tn").onclick=()=>startPuzzle((TIX+1)%PZL.length);
+$("tx").onclick=()=>{TR=0;trTab=1;BMV=null;trList();show("trn")};
+$("e1").onclick=()=>{show(null);newGame()};
+$("e2").onclick=()=>{show(null);startAnalysis()};
+$("e3").onclick=()=>home();
+let PM=null;
+function askPromo(m){PM=m;const w=ME==="w";$("pb").innerHTML=["q","r","b","n"].map(l=>`<button class="pn" data-p="${l}" aria-label="${l}" style="width:64px;height:64px;font-size:40px"><span class="p ${w?"w":"b"}">${GL[l]}\uFE0E</span></button>`).join("");$("prom").hidden=false}
+$("pb").onclick=e=>{const b=e.target.closest("button");if(!b||!PM)return;PM.pp=b.dataset.p;$("prom").hidden=true;const m=PM;PM=null;play(m)};
+$("rs").onclick=()=>{if(over||ANM||TR)return;FLAG=2;over=ME==="w"?"b":"w";note="T’has rendit.";snd("lose");sayEv("win");render()};
+$("anl").onclick=e=>{const b=e.target.closest("button");if(b)rv(+b.dataset.k)};
+$("a0").onclick=()=>rv(0);$("a1").onclick=()=>rv(Math.max(0,AN.k-1));$("a2").onclick=()=>rv(Math.min(AN.MV.length,AN.k+1));$("a3").onclick=()=>rv(AN.MV.length);
+$("a4").onclick=()=>{ANM=0;BMV=null;$("ana").hidden=true;newGame()};
+$("a5").onclick=()=>{ANM=0;BMV=null;$("ana").hidden=true;home()};
+document.addEventListener("keydown",e=>{if(!ANM||!AN||$("ang").hidden)return;if(e.key==="ArrowRight")rv(Math.min(AN.MV.length,AN.k+1));if(e.key==="ArrowLeft")rv(Math.max(0,AN.k-1))});
+function home(){$("hv").innerHTML=[0,3,5,7,11].map(i=>`<span class="pa">${avatar({...BI[i].a,...AX[i]})}</span>`).join("");show("home")}
+$("hp").onclick=menu;$("hc").onclick=()=>{CF="home";show("cust")};$("cb").onclick=()=>{CF=null;show("cust")};$("cd").onclick=()=>show(CF);$("bk").onclick=home;
+function panel(){const b=BI[lv-1];$("av").innerHTML=avatar({...b.a,...AX[lv-1]});$("bn").textContent=b.n;$("be").textContent="Elo "+LV[lv-1].elo}
+function bub(t){const b=$("bub");b.textContent=t;b.hidden=false;b.classList.remove("pop");void b.offsetWidth;b.classList.add("pop")}
+function sayEv(e){if(BI[lv-1].n==="Rafael"&&(!e||e==="took"||e==="lost")&&Math.random()<.45)return bub(RF[Math.random()*RF.length|0]);if(!e||(e==="took"&&Math.random()<.4))return;const t=BI[lv-1].say[e].split("|");bub(t[Math.random()*t.length|0]);if(e==="lost"){const a=$("av");a.classList.remove("hit");void a.offsetWidth;a.classList.add("hit")}}
+function menuOld(){$("lvs").innerHTML=BI.map((b,i)=>`<button data-l="${i+1}"><span class="pa">${avatar({...b.a,...AX[i]})}</span><span class="t"><b>${LV[i].elo}</b><small>${b.n}</small></span></button>`).join("");$("start").hidden=false}
+function click(s){if(ANM)return;if(TR)return trClick(s);if(busy||over||st.turn!==ME)return;const p=st.b[s];
+if(sel!==null){const m=lms.find(m=>(m.t===s&&m.f!==m.t)||(m.c&&m.rs===s));if(m)return m.pr&&!AQ?askPromo(m):play(m)}
+if(p&&isW(p)===(ME==="w")){sel=s;lms=legal(st).filter(m=>m.f===s);snd("tick")}else{sel=null;lms=[]}render()}
+function render(){const bd=$("board");let h="";const ks=st.b.indexOf(st.turn==="w"?"K":"k"),chk=!over&&inCheck(st);
+for(let d=0;d<64;d++){const s=ME==="w"?d:63-d,r=s>>3,f=s&7,dr=d>>3,df=d&7,p=st.b[s],t=lms.find(m=>m.t===s||(m.c&&m.rs===s));
+let cl="s "+((r+f)%2?"d":"l")+(p&&isW(p)===(ME==="w")&&st.turn===ME&&!busy&&!over?" own":"");if(last&&(s===last.f||s===last.t))cl+=" last";if(s===sel)cl+=" sel";if(t)cl+=" t"+(p||t.e?" x":"");if(chk&&s===ks)cl+=" chk";if(BMV&&(s===BMV.f||s===BMV.t))cl+=" bm";
+h+=`<div class="${cl}" data-s="${s}" tabindex="0" role="gridcell" aria-label="${sqn(s)}${p?" "+p:""}">${df===0?`<span class="c r">${ME==="w"?8-dr:dr+1}</span>`:""}${dr===7?`<span class="c f">${"abcdefgh"[ME==="w"?df:7-df]}</span>`:""}${p?`<span class="p ${isW(p)?"w":"b"}">${GL[p.toLowerCase()]}\uFE0E</span>`:""}</div>`}
+bd.innerHTML=h;
+
+
+$("st").textContent=TR?(TD?"Resolt!":"Troba el millor moviment ("+(ME==="w"?"blanques":"negres")+")"):ANM?"Revisió de la partida":over?(over==="d"?"Taules.":over===ME?"Has guanyat!":"Guanya "+BI[lv-1].n+"."):busy?"El motor pensa…":chk?"Escac! El teu torn.":"El teu torn";
+$("note").textContent=note+(MODE===3&&st.k3?` · Escacs donats: tu ${st.k3[ME==="w"?0:1]}, rival ${st.k3[ME==="w"?1:0]}`:"");
+let mh="";for(let i=0;i<moves.length;i+=2)mh+=`<span><b>${i/2+1}.</b>${moves[i]}${moves[i+1]?" "+moves[i+1]:""}</span>`;
+$("mv").innerHTML=mh;$("mv").scrollTop=1e5;runAnim();clkRender();matRender();$("tbt").hidden=!TR;$("gbt").hidden=!!TR;if(over&&!ANM&&!EG){EG=1;setTimeout(showEnd,900)}}
+$("board").addEventListener("click",e=>{const d=e.target.closest(".s");if(d)click(+d.dataset.s)});
+$("board").addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){const d=e.target.closest(".s");if(d){e.preventDefault();click(+d.dataset.s)}}});
+$("nw").onclick=()=>{if(!busy)menu()};
+$("lvs").onclick=e=>{const b=e.target.closest("button");if(b){lv=+b.dataset.l;saveLv();$("start").hidden=true;newGame()}};
+
+
+
+const TB=[0,60,60,180,180,300,600,600,900],TN=["Sense","1 min","1+1","3 min","3+2","5 min","10 min","10+5","15+10"],TIN=[0,0,1,0,2,0,0,5,10];
+let PV=1,DR=1,PRE=null,PF=null;
+const RF=["Això és com la cinètica química: sense energia d’activació no hi ha reacció... ni atac.","A classe de física dic que el cavall és com un electró: salta de nivell sense passar pel mig.","Els meus alumnes de l’institut diuen que els escacs són pura mecànica.","L’enroc és una reacció d’intercanvi: el rei i la torre canvien de posició.","Avui a l’institut he fet química i aquesta partida és més estable que un gas noble.","Als alumnes els poso deures de física... i a tu et demano una jugada millor.","Si la partida s’escalfa penso en l’entropia: tot tendeix al desordre, menys els meus peons.","Tercera llei de Newton, la que explico a l’institut: a tota acció, una reacció. A tota captura, també."];
+MN.push("Dau");MD.push("Tires un dau a cada torn i mous tantes peces (jugades seguides) com indica. Si dónes escac, el torn s’acaba.");
+LV.push({elo:3150,d:3,n:0,s:{cn:6,adv:9,ks:20,ak:6,qa:5,rk:4,mv:1.1}},{elo:3250,d:3,n:0,s:{cn:6,adv:7,ks:40,ak:3,qa:3,rk:6}},{elo:2700,d:3,n:20,s:{cn:9,adv:6,ks:15,ak:8,qa:6,rk:3,mv:.9}});
+BI.push(
+{n:"Hikaru",a:{bg:"#1b263b",skin:"#e9b894",hair:"#14202a",hs:2,top:"#e63946",ex:0,hp:"#111",gl:1},say:{hi:"Bot d’estil ràpid. Blitz, vinga!",lost:"Això era premove, oi?|Ui, ho he vist tard.",took:"Ràpid i net.|Peça al sac.",chk:"Escac. Segueixo el ritme.",win:"Un altre blitz per al compte.",lose:"Bona partida. Revenja?",draw:"Taules. Una més, ràpida."}},
+{n:"Magnus",a:{bg:"#3a506b",skin:"#f3cfae",hair:"#9a7448",hs:1,top:"#1c2541",ex:3,sc:"#e6edf0"},say:{hi:"Bot d’estil posicional. Calma i precisió.",lost:"Una imprecisió. Ho corregiré.|Interessant.",took:"Ho vaig veure fa uns quants moviments.",chk:"Escac. Sense pressa.",win:"El final estava guanyat des de feia estona.",lose:"Has jugat molt bé.",draw:"Taules. Posició igualada."}},
+{n:"Rey Enigma",a:{bg:"#4a1942",skin:"#f0c8a4",hair:"#14202a",hs:0,top:"#6a0572",ex:2,cr:1,mu:1,er:"#f2b84b",sc:"#f2b84b"},say:{hi:"Soc un enigma. Intenta endevinar la meva jugada.",lost:"Ho tenia previst... potser.|Un enigma menys.",took:"L’enigma es resol sol.",chk:"Escac? O era una pista?",win:"Enigma resolt: guanyo jo.",lose:"M’has resolt. Enhorabona.",draw:"Taules: l’enigma continua."}});
+AX.push({eye:"#3b2a1a"},{eye:"#2b6cb0"},{eye:"#7a2e2e",er:"#f2b84b"});
+ORD.push(21,22,23);ORD.sort((a,b)=>LV[a].elo-LV[b].elo);
+BT.push(["#f5f0e1","#8b7355"],["#e3f2fd","#1e88e5"],["#fce4ec","#ad1457"],["#e8f5e9","#2e7d32"],["#fff8e1","#6d4c41"],["#eceff1","#212121"]);
+PS.push({w:"#fff7d6",b:"#2b1b0e",sw:"0 0 2px #8a6d1f,0 1px 1px #8a6d1f",sb:"0 0 2px #fff7d6"},{w:"#b9f6ca",b:"#004d40",sw:"0 0 3px #004d40",sb:"0 0 3px #b9f6ca"},{w:"#ff8a80",b:"#1a237e",sw:"0 0 2px #b71c1c,0 1px 1px #b71c1c",sb:"0 0 2px #ff8a80"});
+HC.push("#c77dff","#ffd60a","#ff4d6d");
+LS.push([1,"Coronació del peó","Quan un peó arriba a l’última fila es converteix en una peça, normalment una dama. A vegades un cavall és millor: pot donar mat o evitar un rei ofegat."],[1,"Rei ofegat","Hi ha rei ofegat quan qui mou no té cap jugada legal i el seu rei no està en escac. Són taules. Si vas guanyant, deixa sempre una casella lliure al rei rival."],[1,"El centre","Les peces al centre controlen més caselles: un cavall al centre ataca fins a 8 caselles, a la vora només 2 o 4."],[1,"Enroc curt i llarg","L’enroc curt (O-O) és més ràpid i segur. El llarg (O-O-O) deixa el rei més exposat, però activa la torre abans."],[2,"Compta atacants i defensors","Abans de capturar, compta quantes peces ataquen la casella i quantes la defensen. Si hi ha més atacants que defensors, la captura guanya material."],[2,"Mat de dama i rei","Acorrala el rei rival a la vora amb la dama, acosta el teu rei i vigila no deixar-lo sense jugades (rei ofegat)."],[2,"Mat de l’escala","Dues torres (o dama i torre) donen escacs alternats per files o columnes empenyent el rei cap a la vora fins al mat."],[3,"Finals de torre","Mantén la torre activa, darrere dels peons passats, i talla el rei rival per una fila o columna."],[3,"Activitat de les peces","Una peça activa val més que una de passiva. Sovint val la pena un peó per millorar molt l’activitat."],[3,"Calcular variants","Mira primer escacs, captures i amenaces. Imagina la resposta més forta de l’adversari abans de decidir."]);
+function DICE(p){if(MODE!==4)return;const sd=isW(p)?"w":"b";if(--DR>0&&!inCheck(st)){const t={...st,turn:sd,ep:-1};if(legal(t).length){st=t;note="🎲 Jugades restants: "+DR;return}}DR=1+(Math.random()*6|0);note="🎲 Dau: "+DR+(DR>1?" jugades":" jugada")}
+(function(){let sd=7;const rnd=()=>{sd=sd+0x6D2B79F5|0;let t=Math.imul(sd^sd>>>15,1|sd);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+const N={1:[0,30],2:[0,35],3:[0,20]},seen=new Set(),fen=(b,t)=>{let r=[];for(let i=0;i<8;i++){let q="",n=0;for(let j=0;j<8;j++){const p=b[i*8+j];if(p){if(n)q+=n;n=0;q+=p}else n++}if(n)q+=n;r.push(q)}return r.join("/")+" "+t+" - -"};
+for(let g=0;g<900&&(N[1][0]<30||N[2][0]<35||N[3][0]<20);g++){let s=newState(0);const L=16+rnd()*70|0;
+for(let i=0;i<L;i++){const ms=legal(s);if(!ms.length)break;
+if(i>=10){const f=fen(s.b,s.turn);if(!seen.has(f)){seen.add(f);const p=fromFen(f),opp=p.turn==="w"?"b":"w",lg=legal(p),M=lg.filter(m=>{const n=apply(p,m);return inCheck(n)&&!legal(n).length});
+if(M.length){const v=M.length===1?3:1;if(N[v][0]<N[v][1]){N[v][0]++;PZL.push({f,v,k:"m1",t:"Mat en 1"})}}
+else if(N[2][0]<35&&!inCheck(p)){const C=lg.filter(m=>{const c=p.b[m.t];if(!c||/[pk]/i.test(c))return 0;const n=apply(p,m);return!att(n.b,m.t,opp)});if(C.length===1&&lg.filter(m=>p.b[m.t]).length<=2){N[2][0]++;PZL.push({f,v:2,k:"t",s:[sqn(C[0].f)+sqn(C[0].t)],t:"Guanya material"})}}}}
+s=apply(s,ms[rnd()*ms.length|0])}}})();
+const DET=`<ellipse cx="17.5" cy="31.5" rx="1" ry="2" fill="#000" opacity=".13"/><ellipse cx="46.5" cy="31.5" rx="1" ry="2" fill="#000" opacity=".13"/><circle cx="31.4" cy="33.2" r=".8" fill="#fff" opacity=".35"/><path d="M26 44q6 3 12 0" stroke="#000" stroke-opacity=".08" stroke-width="2" fill="none"/><circle cx="32" cy="58" r="1" fill="#fff" opacity=".35"/><circle cx="32" cy="62" r="1" fill="#fff" opacity=".35"/>`;
+function arrow(f,t,col,op){const a=di(f),b=di(t),x1=(a&7)+.5,y1=(a>>3)+.5,x2=(b&7)+.5,y2=(b>>3)+.5,L=Math.hypot(x2-x1,y2-y1)||1,ux=(x2-x1)/L,uy=(y2-y1)/L,hx=x2-ux*.34,hy=y2-uy*.34;
+return`<g opacity="${op}" fill="${col}" stroke="${col}"><line x1="${x1}" y1="${y1}" x2="${hx}" y2="${hy}" stroke-width=".2" stroke-linecap="round"/><polygon stroke="none" points="${x2},${y2} ${hx-uy*.24},${hy+ux*.24} ${hx+uy*.24},${hy-ux*.24}"/></g>`}
+function ovl(){const bd=$("board");let g="";
+if(ANM&&AN&&BMV)g+=arrow(BMV.f,BMV.t,"#2e9e5b",.8);
+if(!over&&!ANM&&!TR&&st.turn!==ME){if(PF!==null)bd.children[di(PF)].classList.add("sel");if(PRE){g+=arrow(PRE.f,PRE.t,"#e53935",.5);const p=st.b[PRE.f],c=bd.children[di(PRE.t)];if(p&&c)c.insertAdjacentHTML("beforeend",`<span class="p ${isW(p)?"w":"b"} ghost">${GL[p.toLowerCase()]}\uFE0E</span>`)}}
+if(ANM&&AN&&AN.k&&last){const c=bd.children[di(last.t)],k=AN.cls[AN.k-1];if(c)c.insertAdjacentHTML("beforeend",`<i class="bdg" style="background:${CC[k]}">${["★","!","✓","?!","?","??"][k]}</i>`)}
+bd.insertAdjacentHTML("beforeend",`<svg viewBox="0 0 8 8" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:6">${g}</svg>`)}
+const R0=render;render=function(){R0();ovl()};
+const C0=click;click=function(s){if(!ANM&&!TR&&!over&&st.turn!==ME){const p=st.b[s];if(PF!==null&&s!==PF){PRE={f:PF,t:s};PF=null}else if(p&&isW(p)===(ME==="w")){PF=s;PRE=null}else{PF=null;PRE=null}snd("tick");return render()}PRE=PF=null;C0(s)};
+const P0=play;play=function(m){P0(m);if(!over&&st.turn===ME)PF=null;if(PRE&&!over&&st.turn===ME&&!busy){const q=PRE;PRE=null;const mm=legal(st).find(x=>x.f===q.f&&x.t===q.t);if(mm){mm.pp="q";setTimeout(()=>{if(!over&&st.turn===ME&&!busy&&!ANM)play(mm)},150)}}};
+const N0=newGame;newGame=function(){PRE=PF=null;REPD=DRW=0;DR=1+(Math.random()*6|0);N0();if(MODE===4){note+=" 🎲 Dau: "+DR+(DR>1?" jugades":" jugada");render()}};
+document.addEventListener("visibilitychange",()=>{try{if(AC)document.hidden?AC.suspend():AC.resume()}catch(e){}});
+
+BT.push(["#ffffff","#455a64"],["#ffe0b2","#e65100"],["#d1c4e9","#4527a0"],["#b2ebf2","#006064"],["#f8bbd0","#880e4f"],["#c8e6c9","#1b5e20"],["#fff9c4","#827717"],["#3c3c3c","#111111"]);
+PS.push({w:"#f5f5f5",b:"#37474f",sw:"0 0 2px #607d8b,0 1px 1px #607d8b",sb:"0 0 2px #eceff1"},{w:"#00e5ff",b:"#ff1744",sw:"0 0 8px #00e5ff",sb:"0 0 8px #ff1744"},{w:"#ffd180",b:"#0d47a1",sw:"0 0 2px #e65100,0 1px 1px #e65100",sb:"0 0 3px #82b1ff"},{w:"#f8bbd0",b:"#4a148c",sw:"0 0 2px #ad1457",sb:"0 0 3px #f8bbd0"},{w:"#e0e0e0",b:"#b71c1c",sw:"0 0 2px #000,0 1px 1px #000",sb:"0 0 2px #ffcdd2"},{w:"#fffde7",b:"#1b5e20",sw:"0 0 2px #827717,0 1px 1px #827717",sb:"0 0 2px #c8e6c9"});
+HC.push("#00e5ff","#76ff03","#ff9100","#e040fb");
+$("board").addEventListener("contextmenu",e=>{e.preventDefault();PRE=PF=null;render()});
+
+let PN="Tu",AQ=0,VB=1,TK=1,ML=1,BS=1,REPD=0,DRW=0;const BDL=[250,550,1100];
+try{const x=JSON.parse(localStorage.getItem("escacs-x")||"{}");PN=x.pn||"Tu";AQ=x.aq||0;VB=x.vb??1;TK=x.tk??1;ML=x.ml??1;BS=x.bs??1}catch(e){}
+function xs(){try{localStorage.setItem("escacs-x",JSON.stringify({pn:PN,aq:AQ,vb:VB,tk:TK,ml:ML,bs:BS}))}catch(e){}
+$("xa").checked=!!AQ;$("xv").checked=!!VB;$("xt").checked=!!TK;$("xm").checked=!!ML;$("mv").style.display=ML?"":"none";
+$("xb").innerHTML=["Ràpid","Normal","Lent"].map((n,i)=>`<button class="sm" data-i="${i}" aria-pressed="${i===BS}">${n}</button>`).join("")}
+$("xn").value=PN;xs();
+$("xn").oninput=()=>{PN=$("xn").value.trim()||"Tu";xs();render()};
+$("xa").onchange=()=>{AQ=$("xa").checked?1:0;xs()};$("xv").onchange=()=>{VB=$("xv").checked?1:0;xs()};$("xt").onchange=()=>{TK=$("xt").checked?1:0;xs()};$("xm").onchange=()=>{ML=$("xm").checked?1:0;xs()};
+$("xb").onclick=e=>{const b=e.target.closest("button");if(b){BS=+b.dataset.i;xs();snd("tick")}};
+function CT(i){if(TK&&i===(ME==="w"?0:1)&&clk[i]<10&&clk[i]>0){const c=Math.ceil(clk[i]);if(c!==CT.l){CT.l=c;snd("tick")}}}
+function REP(){if(over)return;const k=q=>q.b.join("")+q.turn,c=k(st);let n=1;for(const h of hist)if(k(h.st)===c)n++;if(n>=3){over="d";REPD=1}}
+MN.push("Finals de peons","Sense dames","Dames per alfils","Peons avançats","Cursa del rei");
+MD.push("Només reis i peons. Sense enroc.","Comença la partida sense dames.","Els alfils són dames: quatre dames al tauler!","Tots els peons comencen una casella avançats.","Guanya qui porta el seu rei a l’última fila rival (o dóna mat).");
+const NS0=newState;newState=function(f9){const s=NS0(f9);
+if(MODE===5){for(let i=0;i<64;i++)if(s.b[i]&&!/[kp]/i.test(s.b[i]))s.b[i]="";s.c={K:0,Q:0,k:0,q:0}}
+if(MODE===6)for(let i=0;i<64;i++)if(/q/i.test(s.b[i]))s.b[i]="";
+if(MODE===7)for(let i=0;i<64;i++)if(s.b[i]==="B")s.b[i]="Q";else if(s.b[i]==="b")s.b[i]="q";
+if(MODE===8){for(let i=63;i>=0;i--)if(s.b[i]==="p"){s.b[i]="";s.b[i+8]="p"}for(let i=0;i<64;i++)if(s.b[i]==="P"){s.b[i]="";s.b[i-8]="P"}}
+return s};
+$("dr").onclick=()=>{if(over||ANM||TR||busy||st.turn!==ME)return;if(moves.length<12){bub("Massa d’hora per a taules!");return}const b=ev(st.b)*(ME==="w"?1:-1);if(b>=-60){DRW=1;over="d";snd("draw");sayEv("draw");note="Taules acordades.";render()}else{bub("No, crec que estic millor.");note="El rival rebutja les taules.";render()}};
+$("cp").onclick=()=>{let t="";for(let i=0;i<moves.length;i+=2)t+=(i/2+1)+". "+moves[i]+(moves[i+1]?" "+moves[i+1]:"")+" ";t=t.replace(/\uFE0E/g,"");try{navigator.clipboard.writeText(t).then(()=>{note="Jugades copiades.";render()},()=>{note=t;render()})}catch(e){note=t;render()}};
+let SS={w:0,l:0,d:0,s:0,b:0};try{SS={...SS,...JSON.parse(localStorage.getItem("escacs-st")||"{}")}}catch(e){}
+const SE0=showEnd;showEnd=function(){if(over==="d")SS.d++;else if(over===ME){SS.w++;SS.s++;SS.b=Math.max(SS.b,SS.s)}else{SS.l++;SS.s=0}try{localStorage.setItem("escacs-st",JSON.stringify(SS))}catch(e){}SE0()};
+const H0=home;home=function(){H0();$("hs").textContent=`Victòries ${SS.w} · Derrotes ${SS.l} · Taules ${SS.d} · Ratxa ${SS.s} (millor ${SS.b})`};
+const M0=menu;menu=function(){M0();$("lvs").insertAdjacentHTML("afterbegin",`<button data-l="${1+Math.random()*LV.length|0}"><span class="t"><b>🎲</b><small>Rival aleatori</small></span></button>`)};
+$("hp").onclick=()=>menu();
+const T0=trList;trList=function(){T0();if(trTab===1)$("trb").insertAdjacentHTML("afterbegin",`<button class="li" data-p="${(Date.now()/864e5|0)%PZL.length}">★ Problema del dia</button>`)};
+const RW0=rows;rows=function(){RW0();try{localStorage.setItem("escacs-cfg",JSON.stringify({m:MODE,c:COL,t:TI}))}catch(e){}};
+try{const q=JSON.parse(localStorage.getItem("escacs-cfg")||"{}");MODE=q.m||0;COL=q.c||0;TI=q.t||0;if(MODE>=MN.length)MODE=0;if(TI>=TN.length)TI=0}catch(e){}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!ANM&&!TR&&!over){sel=null;lms=[];PRE=PF=null;render()}});
+
+const AL=[["first","Primera victòria"],["black","Victòria amb negres"],["st3","Ratxa de 3 victòries"],["fast","Mat en menys de 20 jugades"],["stonk","Guanya a Stonkfish"],["pz10","10 problemes resolts"],["draw","Primeres taules"],["mode","Guanya en un mode especial"]];
+let ACH=[];try{ACH=JSON.parse(localStorage.getItem("escacs-ac")||"[]")}catch(e){}
+SS.r=SS.r||800;
+const svs=()=>{try{localStorage.setItem("escacs-st",JSON.stringify(SS));localStorage.setItem("escacs-ac",JSON.stringify(ACH))}catch(e){}};
+function toast(t){const e=document.createElement("div");e.className="tst";e.textContent="🏆 "+t;e.style.cssText=`position:fixed;left:50%;bottom:${24+document.querySelectorAll(".tst").length*48}px;transform:translateX(-50%);z-index:99;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:600;pointer-events:none`;document.body.appendChild(e);setTimeout(()=>e.remove(),3200)}
+function ach(id){if(ACH.includes(id))return;ACH.push(id);svs();toast(AL.find(a=>a[0]===id)[1])}
+function confetti(){if(RM||!ANI||!Y4)return;for(let i=0;i<50;i++){const e=document.createElement("i"),z=6+Math.random()*6;e.style.cssText=`position:fixed;z-index:99;pointer-events:none;top:-10px;left:${Math.random()*100}vw;width:${z}px;height:${z*1.6}px;background:hsl(${Math.random()*360},85%,60%)`;document.body.appendChild(e);e.animate([{transform:"translateY(0) rotate(0)",opacity:1},{transform:`translateY(${innerHeight+30}px) rotate(${Math.random()*720}deg)`,opacity:.9}],{duration:1800+Math.random()*1500,easing:"ease-in"}).onfinish=()=>e.remove()}}
+const SE1=showEnd;showEnd=function(){SE1();const sc=over==="d"?.5:over===ME?1:0,E=1/(1+Math.pow(10,(LV[lv-1].elo-SS.r)/400));SS.r=Math.max(100,Math.round(SS.r+24*(sc-E)));
+if(over==="d")ach("draw");
+if(over===ME){confetti();ach("first");if(ME==="b")ach("black");if(SS.s>=3)ach("st3");if(BI[lv-1].n==="Stonkfish")ach("stonk");if(MODE>0)ach("mode");if(moves.length<40&&!FLAG&&inCheck(st)&&!legal(st).length)ach("fast")}svs()};
+const TM0=trMove;trMove=function(m){TM0(m);if(TRS.length>=10)ach("pz10")};
+const H1=home;home=function(){H1();$("hs").textContent+=` · Elo estimat ${SS.r}`;$("hAl").innerHTML=AL.map(([i,n])=>`<div>${ACH.includes(i)?"✅":"⬜"} ${n}</div>`).join("")};
+$("e4").onclick=()=>{const t=`${$("eh").textContent} contra ${BI[lv-1].n} (Elo ${LV[lv-1].elo}) en ${Math.ceil(moves.length/2)} jugades · ${MN[MODE]}`,b=$("e4");try{navigator.clipboard.writeText(t)}catch(e){}b.textContent="Copiat!";setTimeout(()=>b.textContent="Compartir resultat",1500)};
+$("cd").insertAdjacentHTML("beforebegin",'<button id="xr" style="width:100%;margin-top:10px">Esborrar estadístiques i logros</button>');
+$("xr").onclick=()=>{const b=$("xr");if(b.dataset.c){SS={w:0,l:0,d:0,s:0,b:0,r:800};ACH=[];svs();b.textContent="Esborrat";delete b.dataset.c}else{b.dataset.c=1;b.textContent="Segur? Torna a prémer";setTimeout(()=>{if(b.dataset.c){delete b.dataset.c;b.textContent="Esborrar estadístiques i logros"}},3000)}};
+const OPN={"e2e4":"Obertura del peó de rei","d2d4":"Obertura del peó de dama","c2c4":"Obertura anglesa","g1f3":"Obertura Réti","e2e4 e7e5":"Joc obert","e2e4 e7e5 g1f3 b8c6 f1b5":"Ruy López","e2e4 e7e5 g1f3 b8c6 f1c4":"Obertura italiana","e2e4 e7e5 g1f3 b8c6 d2d4":"Obertura escocesa","e2e4 e7e5 g1f3 g8f6":"Defensa Petrov","e2e4 e7e5 f2f4":"Gambit de rei","e2e4 c7c5":"Defensa siciliana","e2e4 e7e6":"Defensa francesa","e2e4 c7c6":"Defensa Caro-Kann","e2e4 d7d5":"Defensa escandinava","d2d4 d7d5":"Joc de peó de dama","d2d4 d7d5 c2c4":"Gambit de dama","d2d4 g8f6":"Defensa índia","d2d4 g8f6 c2c4 g7g6":"Índia de rei","d2d4 f7f5":"Defensa holandesa"};
+const R1=render;render=function(){R1();document.title=!TR&&!ANM&&!over&&st.turn===ME&&document.hidden?"● El teu torn · Escacs":"Escacs";
+if(MODE===0&&!TR&&!ANM&&hist.length&&hist.length<=14){const q=hist.map(h=>sqn(h.m.f)+sqn(h.m.t));let nm="";for(let i=1;i<=q.length;i++){const k=q.slice(0,i).join(" ");if(OPN[k])nm=OPN[k]}if(nm)$("note").textContent+=(note?" · ":"")+nm}};
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)document.title="Escacs"});
+let DG=null;const BD=$("board");BD.style.touchAction="none";
+BD.addEventListener("pointerdown",e=>{const d=e.target.closest(".s");if(!d||ANM||over)return;const s=+d.dataset.s,p=st.b[s];if(!p||isW(p)!==(ME==="w"))return;const w=d.offsetWidth;click(s);
+const g=document.createElement("div");g.className="p "+(isW(p)?"w":"b");g.textContent=GL[p.toLowerCase()]+"\uFE0E";g.style.cssText=`position:fixed;z-index:50;pointer-events:none;font-size:${w*.85}px;line-height:1;transform:translate(-50%,-50%);left:${e.clientX}px;top:${e.clientY}px`;DG={s,g,x:e.clientX,y:e.clientY,on:0}});
+window.addEventListener("pointermove",e=>{if(!DG)return;if(!DG.on&&Math.hypot(e.clientX-DG.x,e.clientY-DG.y)>6){DG.on=1;document.body.appendChild(DG.g)}if(DG.on){DG.g.style.left=e.clientX+"px";DG.g.style.top=e.clientY+"px"}});
+const dgEnd=e=>{if(!DG)return;const D=DG;DG=null;D.g.remove();if(!D.on||e.type==="pointercancel")return;const el=document.elementFromPoint(e.clientX,e.clientY),q=el&&el.closest&&el.closest(".s");if(q&&q.dataset.s!==undefined&&+q.dataset.s!==D.s)click(+q.dataset.s)};
+window.addEventListener("pointerup",dgEnd);window.addEventListener("pointercancel",dgEnd);
+
+const SLD=[150,300,520];let AS=1,Y1=1,Y2=1,Y3=1,Y4=1;
+try{const y=JSON.parse(localStorage.getItem("escacs-y")||"{}");AS=y.as??1;Y1=y.a??1;Y2=y.b??1;Y3=y.c??1;Y4=y.d??1}catch(e){}
+function ysv(){try{localStorage.setItem("escacs-y",JSON.stringify({as:AS,a:Y1,b:Y2,c:Y3,d:Y4}))}catch(e){}
+$("y1").checked=!!Y1;$("y2").checked=!!Y2;$("y3").checked=!!Y3;$("y4").checked=!!Y4;
+$("mat").classList.toggle("hid",!Y1);document.querySelector(".bot").classList.toggle("hid",!Y2);$("board").classList.toggle("nl",!Y3);
+$("ys").innerHTML=["Ràpida","Normal","Lenta"].map((n,i)=>`<button class="sm" data-i="${i}" aria-pressed="${i===AS}">${n}</button>`).join("")}
+$("xr").insertAdjacentHTML("beforebegin",'<div class="og"><span>Animació</span><div id="ys"></div></div><div class="og"><span>Panells</span><div class="tg"><label><input type="checkbox" id="y1"> Peces capturades</label><label><input type="checkbox" id="y2"> Panell del bot</label><label><input type="checkbox" id="y3"> Ressaltar última jugada</label><label><input type="checkbox" id="y4"> Confeti</label></div></div>');
+ysv();
+$("ys").onclick=e=>{const b=e.target.closest("button");if(b){AS=+b.dataset.i;ysv()}};
+$("y1").onchange=()=>{Y1=$("y1").checked?1:0;ysv()};$("y2").onchange=()=>{Y2=$("y2").checked?1:0;ysv()};$("y3").onchange=()=>{Y3=$("y3").checked?1:0;ysv()};$("y4").onchange=()=>{Y4=$("y4").checked?1:0;ysv()};
+document.querySelector("main").insertAdjacentHTML("afterbegin",'<div class="qb"><button id="qm" aria-label="So">🔊</button><button id="qt" aria-label="Tema">🌓</button><button id="qf" aria-label="Pantalla completa">⛶</button><button id="qh" aria-label="Ajuda">?</button></div>');
+$("qm").onclick=()=>{SND=!SND;applyOpt();$("qm").textContent=SND?"🔊":"🔇"};
+$("qt").onclick=()=>{TH=(TH+1)%3;applyOpt()};
+$("qf").onclick=()=>{try{document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}catch(e){}};
+function help(){if($("hlp")){$("hlp").remove();return}const d=document.createElement("div");d.id="hlp";d.style.cssText="position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(6px);padding:16px";d.innerHTML='<div class="card"><h2>Ajuda</h2><p>N nova partida · M so · T tema · F pantalla completa · Esc cancel·la · Clic dret cancel·la premoves · ←/→ anàlisi. Pots arrossegar les peces o fer clic.</p><button class="pri" style="width:100%">Tanca</button></div>';d.onclick=()=>d.remove();document.body.appendChild(d)}
+$("qh").onclick=help;
+document.addEventListener("keydown",e=>{if(e.ctrlKey||e.metaKey||e.altKey||/INPUT|TEXTAREA/.test(document.activeElement.tagName))return;const k=e.key.toLowerCase();
+if(k==="n"&&!busy)menu();else if(k==="m")$("qm").click();else if(k==="t")$("qt").click();else if(k==="f")$("qf").click();else if(k==="?"||k==="h")help();
+else if(e.key==="Escape"){if($("hlp"))$("hlp").remove();else if(!$("cust").hidden)$("cd").click();else if(!$("start").hidden)$("bk").click()}});
+const RS0=$("rs").onclick;$("rs").onclick=()=>{const b=$("rs");if(over||ANM||TR)return;if(b.dataset.c){delete b.dataset.c;b.textContent="Abandonar";RS0()}else{b.dataset.c=1;b.textContent="Segur?";setTimeout(()=>{delete b.dataset.c;b.textContent="Abandonar"},3000)}};
+addEventListener("beforeunload",e=>{if(!over&&!TR&&!ANM&&moves.length>2){e.preventDefault();e.returnValue=""}});
+let TSTART=Date.now(),SB={};try{SB=JSON.parse(localStorage.getItem("escacs-sb")||"{}")}catch(e){}
+const rk=e=>e<700?"Principiant":e<1000?"Aficionat":e<1400?"Club":e<1800?"Avançat":e<2200?"Expert":e<2800?"Mestre":e<4000?"Superhumà":"Més enllà";
+const SE2=showEnd;showEnd=function(){const r0=SS.r,n=BI[lv-1].n,b=SB[n]=SB[n]||[0,0,0];b[over==="d"?2:over===ME?0:1]++;try{localStorage.setItem("escacs-sb",JSON.stringify(SB))}catch(e){}SE2();const d=SS.r-r0,t=Math.round((Date.now()-TSTART)/1000);$("es").textContent+=` · Elo estimat ${SS.r} (${d>=0?"+":""}${d}) · Durada ${t/60|0}:${String(t%60).padStart(2,"0")} · Contra ${n}: ${b[0]}-${b[1]}-${b[2]}`};
+const PN0=panel;panel=function(){PN0();const b=BI[lv-1],r=SB[b.n]||[0,0,0],e=LV[lv-1].elo;$("av").title=`${b.n} · Elo ${e} · ${rk(e)} · Tu: ${r[0]}-${r[1]}-${r[2]}`;$("be").textContent="Elo "+e+" · "+rk(e)+(MODE>0?" · "+MN[MODE]:"")};
+const H2=home;home=function(){H2();$("hs").textContent+=` (${rk(SS.r)})`};
+const N1=newGame;newGame=function(){TSTART=Date.now();N1();snd("tick");setTimeout(()=>snd("tick"),90)};
+$("av").ondblclick=()=>{if(TR)return;const t=BI[lv-1].say[["hi","took","chk","win"][Math.random()*4|0]].split("|");bub(t[Math.random()*t.length|0])};
+$("bub").onclick=()=>{$("bub").hidden=true};
+const B0=bub;bub=function(t){B0(t);clearTimeout(bub.t);bub.t=setTimeout(()=>{if($("bub").textContent===t)$("bub").hidden=true},9000)};
+const R2=render;render=function(){R2();if(!TR&&!ANM&&!over&&moves.length)$("st").textContent+=" · Jugada "+((moves.length/2+1)|0)};
+$("note").setAttribute("aria-live","polite");
+$("e5").onclick=()=>{const c=COL;COL=ME==="w"?1:0;show(null);newGame();COL=c};
+let LR=[];try{LR=JSON.parse(localStorage.getItem("escacs-ls")||"[]")}catch(e){}
+const L0=lesson;lesson=function(i){L0(i);if(!LR.includes(i)){LR.push(i);try{localStorage.setItem("escacs-ls",JSON.stringify(LR))}catch(e){}}$("trb").insertAdjacentHTML("beforeend",`<div style="display:flex;gap:8px;margin-top:10px">${i>0?`<button data-l="${i-1}">← Anterior</button>`:""}${i<LS.length-1?`<button data-l="${i+1}">Següent →</button>`:""}</div>`)};
+const T1=trList;trList=function(){T1();const b=$("trb");if(trTab===1){b.insertAdjacentHTML("afterbegin",`<button class="li" data-p="${Math.random()*PZL.length|0}">🎲 Problema aleatori</button>`);b.insertAdjacentHTML("beforeend",'<button class="li" id="pr" style="margin-top:10px">Reiniciar progrés</button>');$("pr").onclick=()=>{const x=$("pr");if(x.dataset.c){TRS=[];try{localStorage.setItem("escacs-tr","[]")}catch(e){}trList()}else{x.dataset.c=1;x.textContent="Segur? Torna a prémer"}}}
+else b.querySelectorAll("[data-l]").forEach(x=>{if(LR.includes(+x.dataset.l))x.textContent="✓ "+x.textContent})};
+$("tn").onclick=()=>{let i=(TIX+1)%PZL.length;for(let k=1;k<=PZL.length;k++){const j=(TIX+k)%PZL.length;if(!TRS.includes(j)){i=j;break}}startPuzzle(i)};
+$("hd").onclick=()=>startPuzzle((Date.now()/864e5|0)%PZL.length);
+const TM1=trMove;trMove=function(m){const was=TD;TM1(m);if(TD&&!was)toast("Problema resolt · "+TRS.length+"/"+PZL.length)};
+
+/* ===== AVATARS ===== */
+const mx=(h,f)=>{if(h.length===4)h="#"+h[1]+h[1]+h[2]+h[2]+h[3]+h[3];const n=parseInt(h.slice(1),16),r=n>>16,g=n>>8&255,b=n&255,m=f<0?0:255,t=Math.abs(f),q=v=>Math.round(v+(m-v)*t);return`rgb(${q(r)},${q(g)},${q(b)})`};
+let AID=0;
+function HUM(c){const id="h"+AID++,k=c.skin||"#f1c9a5",h=c.hair||"#3a2a20",E=c.eye||"#3b2a1a",hs=c.hs||0,tp=c.tp||0,ex=c.ex||0,top=c.top||"#4a90d9",
+sk1=mx(k,.22),sk2=mx(k,-.16),sk3=mx(k,-.34),h1=mx(h,.3),h2=mx(h,-.35),t1=mx(top,.2),t2=mx(top,-.3),F=`url(#${id}f)`,H=`url(#${id}h)`,T=`url(#${id}t)`,bc=mx(h,-.1);
+let s=`<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="${id}b" cx=".5" cy=".35" r=".85"><stop offset="0" stop-color="${mx(c.bg,.35)}"/><stop offset="1" stop-color="${mx(c.bg,-.3)}"/></radialGradient><radialGradient id="${id}f" cx=".4" cy=".3" r=".9"><stop offset="0" stop-color="${sk1}"/><stop offset=".6" stop-color="${k}"/><stop offset="1" stop-color="${sk2}"/></radialGradient><linearGradient id="${id}h" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${h1}"/><stop offset=".5" stop-color="${h}"/><stop offset="1" stop-color="${h2}"/></linearGradient><linearGradient id="${id}t" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${t1}"/><stop offset="1" stop-color="${t2}"/></linearGradient><radialGradient id="${id}e" cx=".5" cy=".4" r=".6"><stop offset="0" stop-color="${mx(E,.4)}"/><stop offset="1" stop-color="${mx(E,-.35)}"/></radialGradient></defs><rect width="100" height="100" fill="url(#${id}b)"/><circle cx="84" cy="16" r="24" fill="#fff" opacity=".07"/><circle cx="10" cy="40" r="16" fill="#000" opacity=".07"/>`;
+if(c.rm)s+=`<rect x="4" y="4" width="92" height="46" rx="3" fill="#2f4f4f" stroke="#8d6e63" stroke-width="2.5"/><text x="10" y="22" font-size="10" fill="#fff" opacity=".85" font-family="serif">E = mc²</text><text x="10" y="40" font-size="9" fill="#fff" opacity=".8" font-family="serif">H₂O  ⌬  F=ma</text>`;
+if(hs===4&&!c.nh)s+=`<path d="M25 46C18 14 40 4 50 4C60 4 82 14 75 46L82 84C70 90 30 90 18 84Z" fill="${H}"/>`;
+s+=`<path d="M4 100C6 84 22 77 40 75L60 75C78 77 94 84 96 100Z" fill="${T}"/><path d="M41 60L41 78C45 84 55 84 59 78L59 60Z" fill="${sk2}"/><ellipse cx="50" cy="72" rx="13" ry="6" fill="${sk3}" opacity=".35"/>`;
+if(tp===1)s+=`<path d="M36 74L50 92L42 98L28 82Z" fill="#f4f4f4" stroke="#cfcfcf" stroke-width=".6"/><path d="M64 74L50 92L58 98L72 82Z" fill="#f4f4f4" stroke="#cfcfcf" stroke-width=".6"/><path d="M50 88L46 94L50 100L54 94Z" fill="${c.tie||"#c0392b"}"/>`;
+else if(tp===2)s+=`<path d="M26 80C30 66 70 66 74 80C66 90 34 90 26 80Z" fill="${t2}"/><path d="M34 78C40 72 60 72 66 78C60 86 40 86 34 78Z" fill="${sk2}"/><path d="M44 86L43 98M56 86L57 98" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>`;
+else if(tp===3)s+=`<path d="M36 74L50 100L30 100L22 84Z" fill="${t2}"/><path d="M64 74L50 100L70 100L78 84Z" fill="${t2}"/><path d="M42 76L50 98L58 76Z" fill="#f4f4f4"/><path d="M50 82L47 90L50 100L53 90Z" fill="${c.tie||"#8e2a2a"}"/>`;
+else s+=`<path d="M37 75Q50 92 63 75Q50 83 37 75Z" fill="${sk2}"/>`;
+if(c.pl)s+=`<path d="M40 76L48 100M60 76L52 100" stroke="#2f6fd0" stroke-width="2.4"/><rect x="45" y="90" width="10" height="9" rx="1.5" fill="#fff" stroke="#999"/>`;
+if(c.sc)s+=`<path d="M26 80Q50 94 74 80L78 92Q50 106 22 92Z" fill="${c.sc}"/><path d="M30 84Q50 96 70 84" stroke="#000" stroke-opacity=".15" fill="none"/>`;
+s+=`<ellipse cx="25.5" cy="48" rx="4" ry="6" fill="${F}"/><ellipse cx="74.5" cy="48" rx="4" ry="6" fill="${F}"/><ellipse cx="25.8" cy="48.5" rx="2" ry="3.5" fill="${sk2}" opacity=".6"/><ellipse cx="74.2" cy="48.5" rx="2" ry="3.5" fill="${sk2}" opacity=".6"/>`;
+s+=`<path d="M50 14C33 14 25 28 26 46C27 62 36 76 50 76C64 76 73 62 74 46C75 28 67 14 50 14Z" fill="${F}"/><path d="M26 46C27 62 36 76 50 76C64 76 73 62 74 46C70 62 62 70 50 70C38 70 30 62 26 46Z" fill="${sk3}" opacity=".2"/><circle cx="35" cy="58" r="5" fill="#ff6f6f" opacity=".16"/><circle cx="65" cy="58" r="5" fill="#ff6f6f" opacity=".16"/><ellipse cx="44" cy="26" rx="9" ry="5" fill="#fff" opacity=".12"/>`;
+if(c.fk)for(const[x,y]of[[34,54],[38,57],[31,57],[66,54],[62,57],[69,57]])s+=`<circle cx="${x}" cy="${y}" r=".9" fill="${mx(k,-.45)}" opacity=".6"/>`;
+if(c.wr)s+=`<path d="M38 24Q50 21 62 24M36 29Q50 26 64 29" stroke="${sk3}" stroke-width="1" fill="none" opacity=".5"/><path d="M31 50L28 52M69 50L72 52M42 60Q40 66 44 70M58 60Q60 66 56 70" stroke="${sk3}" stroke-width=".9" fill="none" opacity=".5"/>`;
+if(c.rb){s+=`<path d="M50 14V4" stroke="#90a4ae" stroke-width="2.5"/><circle cx="50" cy="3.5" r="3" fill="#ff5252"/><rect x="31" y="39" width="15" height="11" rx="2" fill="#1b2b34"/><rect x="54" y="39" width="15" height="11" rx="2" fill="#1b2b34"/><rect x="34" y="42" width="9" height="5" fill="#00e5ff"/><rect x="57" y="42" width="9" height="5" fill="#00e5ff"/><rect x="40" y="62" width="20" height="9" rx="2" fill="#263238"/><path d="M45 62V71M50 62V71M55 62V71" stroke="#78909c"/><circle cx="30" cy="22" r="1.6" fill="#78909c"/><circle cx="70" cy="22" r="1.6" fill="#78909c"/><path d="M28 30Q50 22 72 30" stroke="#fff" stroke-opacity=".3" stroke-width="2" fill="none"/>`}
+else{
+const eye=(x,fl)=>{const r=fl?-1:1;return`<ellipse cx="${x}" cy="45" rx="6.2" ry="${ex===4?5.4:4.4}" fill="#fff"/><circle cx="${x+r*.4}" cy="45.4" r="3.7" fill="url(#${id}e)"/><circle cx="${x+r*.4}" cy="45.4" r="1.8" fill="#0d0d0d"/><circle cx="${x+r*1.6}" cy="43.8" r="1.2" fill="#fff"/><circle cx="${x-r*.9}" cy="46.8" r=".6" fill="#fff" opacity=".8"/><path d="M${x-6.6} 44.6Q${x} 39.2 ${x+6.6} 44.6" stroke="#1a1414" stroke-width="1.9" fill="none" stroke-linecap="round"/><path d="M${x-5} 48.6Q${x} 50.4 ${x+5} 48.6" stroke="${sk3}" stroke-width=".8" fill="none" opacity=".6"/>`};
+s+=`<path d="M50 46C51 54 54 58 56 60C53 63 47 63 44 60C46 59 47 56 48 52Z" fill="${sk3}" opacity=".3"/><ellipse cx="49" cy="58" rx="2" ry="1.3" fill="#fff" opacity=".2"/><path d="M46.5 61q1.2 1 2.4 0M51.1 61q1.2 1 2.4 0" stroke="${sk3}" stroke-width="1" fill="none"/>`;
+if(c.bd)s+=`<path d="M26 52C27 68 36 80 50 80C64 80 73 68 74 52C70 62 64 64 59 63Q50 60 41 63C36 64 30 62 26 52Z" fill="${H}"/><ellipse cx="50" cy="67" rx="10" ry="6" fill="${k}"/>`;
+const M=[`<path d="M41 65Q50 77 59 65Q50 68 41 65Z" fill="#6b1f2a"/><path d="M42.5 65.6Q50 68.5 57.5 65.6L57 67.5Q50 70 43 67.5Z" fill="#fff"/><path d="M45 72Q50 75 55 72Q50 70 45 72Z" fill="#d9626f"/>`,`<path d="M42 68Q50 70 58 64" stroke="#7a2e2e" stroke-width="2.2" fill="none" stroke-linecap="round"/>`,`<path d="M43 69Q50 66 57 69" stroke="#7a2e2e" stroke-width="2.2" fill="none" stroke-linecap="round"/>`,`<path d="M43 67Q50 71 57 67" stroke="#7a2e2e" stroke-width="2.2" fill="none" stroke-linecap="round"/>`,`<ellipse cx="50" cy="69" rx="4.5" ry="5" fill="#6b1f2a"/><ellipse cx="50" cy="71.5" rx="2.6" ry="1.8" fill="#d9626f"/>`];
+s+=M[ex]||M[3];
+if(c.mu)s+=`<path d="M38 63Q44 59 50 62Q56 59 62 63Q56 66 50 64Q44 66 38 63Z" fill="${H}"/>`;
+s+=eye(39,0)+eye(61,1);
+s+=`<path d="${ex===2?"M30 34L46 39M70 34L54 39":ex===1?"M31 37Q39 33 46 37M54 35Q62 29 69 34":ex===4?"M31 33Q39 28 46 33M54 33Q62 28 69 33":ex===3?"M31 37Q39 35 46 37M54 37Q62 35 69 37":"M31 36Q39 32 46 36M54 36Q62 32 69 36"}" stroke="${bc}" stroke-width="2.8" fill="none" stroke-linecap="round"/>`;
+if(c.gl)s+=`<g fill="rgba(190,225,255,.22)" stroke="#1c2b36" stroke-width="1.8"><rect x="31" y="39" width="16" height="12" rx="4"/><rect x="53" y="39" width="16" height="12" rx="4"/><path d="M47 44H53M31 43L26 41M69 43L74 41"/></g><path d="M34 41L38 41" stroke="#fff" stroke-opacity=".6" stroke-width="1.2"/>`;
+if(c.ep)s+=`<path d="M24 36L76 30" stroke="#111" stroke-width="2.4"/><ellipse cx="39" cy="45" rx="8" ry="7" fill="#0b0b0b" stroke="#333"/><path d="M33 42Q37 39 42 41" stroke="#fff" stroke-opacity=".25" stroke-width="1.2" fill="none"/><path d="M36 38L41 53" stroke="#7a2e2e" stroke-width="1.2" opacity=".6"/>`}
+if(!c.nh){
+if(hs===0)s+=`<path d="M26 40C24 22 36 12 50 12C64 12 76 22 74 40C70 28 62 22 50 22C38 22 30 28 26 40Z" fill="${H}"/>`;
+if(hs===1)s+=`<path d="M24 44C20 18 38 6 54 8C70 10 80 24 76 44C74 34 70 28 62 26C52 30 36 28 30 34C27 37 25 40 24 44Z" fill="${H}"/><path d="M44 10C42 18 36 24 30 28" stroke="${h2}" stroke-width="1" fill="none" opacity=".6"/>`;
+if(hs===2)s+=`<path d="M24 46C16 24 28 6 46 6C52 2 62 4 66 8C80 10 84 26 76 46C74 36 70 30 64 28C60 24 52 28 46 26C38 30 32 30 28 36Z" fill="${H}"/><path d="M40 10L44 20M56 8L58 18M68 14L66 22" stroke="${h2}" stroke-width="1" opacity=".5"/>`;
+if(hs===3)s+=`<path d="M24 44L20 26L30 30L30 10L40 22L46 4L54 20L62 6L66 24L76 12L76 32L82 28L76 44C72 34 64 28 50 28C36 28 28 34 24 44Z" fill="${H}"/>`;
+if(hs===4)s+=`<path d="M24 50C18 18 38 6 54 8C72 10 82 26 76 50C74 38 66 24 52 22C44 28 32 34 24 50Z" fill="${H}"/>`;
+if(hs)s+=`<path d="M34 16Q46 8 60 14" stroke="#fff" stroke-opacity=".3" stroke-width="2.4" fill="none" stroke-linecap="round"/>`}
+if(c.hat)s+=`<path d="M26 34C26 14 74 14 74 34Z" fill="${c.hat}"/><path d="M24 34H76C76 38 24 38 24 34Z" fill="${mx(c.hat,-.25)}"/><path d="M34 20Q50 14 64 20" stroke="#fff" stroke-opacity=".25" stroke-width="2" fill="none"/>`;
+if(c.fc)s+=`<path d="M24 32C24 14 76 14 76 32C62 28 38 28 24 32Z" fill="#7a7f85"/><path d="M22 32C40 36 62 36 80 32L84 36C62 42 38 42 18 36Z" fill="#5f646a"/><circle cx="50" cy="15" r="1.6" fill="#4a4e53"/>`;
+if(c.cr)s+=`<path d="M30 20L32 4L41 12L50 0L59 12L68 4L70 20Z" fill="#f2b84b" stroke="#b9801a"/><circle cx="50" cy="8" r="1.8" fill="#d9534f"/><circle cx="36" cy="12" r="1.3" fill="#4aa3df"/><circle cx="64" cy="12" r="1.3" fill="#4aa3df"/>`;
+if(c.bn)s+=`<path d="M24 34C30 20 70 20 76 34C62 28 38 28 24 34Z" fill="#c0392b"/><path d="M76 32L88 28L86 40L76 36Z" fill="#a8291d"/><circle cx="36" cy="27" r="1.2" fill="#fff"/><circle cx="50" cy="24" r="1.2" fill="#fff"/><circle cx="64" cy="27" r="1.2" fill="#fff"/>`;
+if(c.hp)s+=`<path d="M24 46C22 10 78 10 76 46" fill="none" stroke="${c.hp}" stroke-width="3.5"/><rect x="19" y="40" width="9" height="16" rx="4" fill="${c.hp}"/><rect x="72" y="40" width="9" height="16" rx="4" fill="${c.hp}"/><circle cx="23.5" cy="48" r="1.6" fill="#e63946"/><circle cx="76.5" cy="48" r="1.6" fill="#e63946"/>`;
+if(c.ch)s+=`<path d="M30 24C20 22 20 6 34 8C38 0 62 0 66 8C80 6 80 22 70 24L68 30H32Z" fill="#fff" stroke="#ddd"/><path d="M32 28H68" stroke="#ddd"/>`;
+if(c.cw)s+=`<path d="M12 30C24 38 76 38 88 30C84 36 70 28 70 18C66 8 34 8 30 18C30 28 16 36 12 30Z" fill="#8a5a2b"/><path d="M31 22Q50 26 69 22" stroke="#3b2412" stroke-width="3" fill="none"/>`;
+if(c.wt)s+=`<path d="M16 30Q50 40 84 30L60 26L54 2L40 26Z" fill="#4a2a7a"/><path d="M40 26Q50 30 60 26" stroke="#f2b84b" stroke-width="3" fill="none"/>`;
+if(c.nj)s+=`<path d="M24 34H76V40H24Z" fill="#111"/><path d="M26 52C30 64 38 66 50 66C62 66 70 64 74 52L74 70C66 78 34 78 26 70Z" fill="#222"/><path d="M76 36L90 40L84 46L76 42Z" fill="#111"/>`;
+if(c.er)s+=`<circle cx="25.5" cy="56" r="2" fill="${c.er}" stroke="#9a7a1a" stroke-width=".6"/><circle cx="74.5" cy="56" r="2" fill="${c.er}" stroke="#9a7a1a" stroke-width=".6"/>`;
+if(c.as)s+=`<rect x="30" y="78" width="40" height="8" rx="4" fill="#cfd8dc"/><circle cx="50" cy="46" r="36" fill="rgba(190,220,255,.16)" stroke="#e8edf2" stroke-width="5"/><path d="M26 30Q34 18 48 14" stroke="#fff" stroke-opacity=".6" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="82" cy="90" r="5" fill="#d9534f"/>`;
+return s+"</svg>"}
+function FISH(c){const id="h"+AID++;return`<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="${id}a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6cc4f5"/><stop offset="1" stop-color="#2a6fa8"/></linearGradient><radialGradient id="${id}b" cx=".5" cy=".4" r=".9"><stop offset="0" stop-color="#14664a"/><stop offset="1" stop-color="#062a1f"/></radialGradient></defs><rect width="100" height="100" fill="url(#${id}b)"/><path d="M0 84L14 68L24 76L38 54L52 62L66 40L80 48L100 24" stroke="#2ecc71" stroke-width="2.5" fill="none" opacity=".7"/><g fill="#2ecc71" opacity=".6"><rect x="8" y="70" width="5" height="22"/><rect x="18" y="62" width="5" height="26" fill="#e74c3c"/><rect x="84" y="30" width="5" height="22"/></g><path d="M80 14L94 14L94 28" stroke="#2ecc71" stroke-width="3" fill="none"/><path d="M24 56L6 38L8 76Z" fill="#2a6fa8"/><path d="M44 34L56 16L64 38Z" fill="#2a6fa8"/><path d="M20 56C24 34 58 26 76 44C86 52 86 62 76 70C58 88 24 80 20 56Z" fill="url(#${id}a)"/><path d="M30 68C44 80 66 78 76 68C66 72 44 72 30 68Z" fill="#cfeeff" opacity=".7"/><path d="M52 46Q47 56 52 68" stroke="#1d5f8f" stroke-width="2" fill="none"/><path d="M34 46q3 3 6 0M42 40q3 3 6 0M34 58q3 3 6 0" stroke="#fff" stroke-opacity=".3" stroke-width="1.4" fill="none"/><text x="32" y="64" font-size="15" fill="#fff" font-weight="700" font-family="sans-serif" opacity=".85">$</text><circle cx="68" cy="52" r="6.5" fill="#fff"/><circle cx="69" cy="53" r="3.2" fill="#111"/><rect x="56" y="44" width="24" height="11" rx="3" fill="#0a0a0a"/><path d="M59 46L66 46" stroke="#fff" stroke-opacity=".6" stroke-width="1.6"/><path d="M74 64Q80 67 84 62" stroke="#12476b" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="88" cy="40" r="2.4" fill="#fff" opacity=".4"/><circle cx="92" cy="32" r="1.6" fill="#fff" opacity=".4"/></svg>`}
+function FUR(c){const id="h"+AID++,e=(x)=>`<ellipse cx="${x}" cy="52" rx="7.5" ry="9" fill="#fff"/><ellipse cx="${x+(x<50?.8:-.8)}" cy="53.5" rx="5" ry="6.5" fill="url(#${id}e)"/><ellipse cx="${x+(x<50?.8:-.8)}" cy="54" rx="2.4" ry="3.6" fill="#102a43"/><circle cx="${x+(x<50?2.6:-1)}" cy="50.5" r="1.8" fill="#fff"/><circle cx="${x+(x<50?-1.4:1.4)}" cy="56" r=".9" fill="#fff"/>`;
+return`<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="${id}b" cx=".5" cy=".4" r=".9"><stop offset="0" stop-color="#ffe9f3"/><stop offset="1" stop-color="#f7a8cc"/></radialGradient><radialGradient id="${id}f" cx=".4" cy=".3" r=".9"><stop offset="0" stop-color="#9a82ff"/><stop offset="1" stop-color="#5a3fd6"/></radialGradient><radialGradient id="${id}e" cx=".5" cy=".4" r=".6"><stop offset="0" stop-color="#7bf5e6"/><stop offset="1" stop-color="#139c8e"/></radialGradient></defs><rect width="100" height="100" fill="url(#${id}b)"/><path d="M12 6L26 44L44 26Z" fill="#5a3fd6"/><path d="M88 6L74 44L56 26Z" fill="#5a3fd6"/><path d="M17 15L27 38L38 28Z" fill="#ff9ec7"/><path d="M83 15L73 38L62 28Z" fill="#ff9ec7"/><path d="M18 50C14 30 30 24 50 24C70 24 86 30 82 50C86 54 90 60 84 66L88 74L78 72C74 86 62 92 50 92C38 92 26 86 22 72L12 74L16 66C10 60 14 54 18 50Z" fill="url(#${id}f)"/><path d="M50 26Q42 38 50 48Q58 38 50 26Z" fill="#4630b8"/><ellipse cx="50" cy="68" rx="19" ry="14" fill="#f6efff"/>${e(36)}${e(64)}<path d="M28 44L24 40M72 44L76 40" stroke="#2b2140" stroke-width="1.6" stroke-linecap="round"/><path d="M43 60Q50 56 57 60Q55 67 50 68Q45 67 43 60Z" fill="#2b2140"/><ellipse cx="47.5" cy="60.5" rx="2.2" ry="1.1" fill="#fff" opacity=".6"/><path d="M45 75Q50 86 55 75Z" fill="#ff6b9a"/><path d="M50 68V72M38 72Q44 78 50 72Q56 78 62 72" stroke="#2b2140" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M40 74L42 79L44 75Z" fill="#fff"/><ellipse cx="25" cy="66" rx="5" ry="3" fill="#ff7a9a" opacity=".5"/><ellipse cx="75" cy="66" rx="5" ry="3" fill="#ff7a9a" opacity=".5"/><path d="M16 52C10 4 90 4 84 52" fill="none" stroke="#222" stroke-width="4.5"/><rect x="9" y="44" width="11" height="20" rx="5" fill="#ff5fa2"/><rect x="80" y="44" width="11" height="20" rx="5" fill="#ff5fa2"/><circle cx="14.5" cy="54" r="2" fill="#7bf5e6"/><circle cx="85.5" cy="54" r="2" fill="#7bf5e6"/><path d="M20 92Q50 104 80 92L82 100H18Z" fill="#ff5fa2"/><path d="M22 94Q50 105 78 94" stroke="#ffd60a" stroke-width="1.6" fill="none"/><path d="M24 97Q50 108 76 97" stroke="#27d3c3" stroke-width="1.6" fill="none"/></svg>`}
+function POT(c){const id="h"+AID++;return`<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="${id}b" cx=".5" cy=".4" r=".9"><stop offset="0" stop-color="#eceff1"/><stop offset="1" stop-color="#90a4ae"/></radialGradient><radialGradient id="${id}p" cx=".4" cy=".3" r=".9"><stop offset="0" stop-color="#e8c88f"/><stop offset="1" stop-color="#a07a3f"/></radialGradient></defs><rect width="100" height="100" fill="url(#${id}b)"/><ellipse cx="50" cy="94" rx="30" ry="5" fill="#000" opacity=".15"/><path d="M50 20Q46 8 40 6M58 22Q64 12 70 12" stroke="#5d9c3d" stroke-width="3" fill="none" stroke-linecap="round"/><ellipse cx="38" cy="6" rx="5" ry="2.6" fill="#7bc24f"/><ellipse cx="72" cy="12" rx="5" ry="2.6" fill="#7bc24f"/><path d="M16 56C12 30 32 16 54 18C78 18 90 38 86 60C84 82 66 92 48 90C28 90 20 76 16 56Z" fill="url(#${id}p)"/><g fill="#7a5a2c" opacity=".55"><circle cx="28" cy="38" r="1.8"/><circle cx="74" cy="34" r="1.6"/><circle cx="24" cy="70" r="1.8"/><circle cx="76" cy="74" r="2"/><circle cx="60" cy="84" r="1.6"/><circle cx="40" cy="26" r="1.4"/></g><ellipse cx="38" cy="52" rx="5.5" ry="6.5" fill="#fff"/><ellipse cx="62" cy="52" rx="5.5" ry="6.5" fill="#fff"/><circle cx="39" cy="53" r="3.2" fill="#2a1a10"/><circle cx="61" cy="53" r="3.2" fill="#2a1a10"/><circle cx="40.2" cy="51.5" r="1.1" fill="#fff"/><circle cx="62.2" cy="51.5" r="1.1" fill="#fff"/><path d="M30 42Q38 38 45 42M55 42Q62 38 70 42" stroke="#6b4a1f" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M42 69Q50 73 58 69" stroke="#5a3a1a" stroke-width="2.4" fill="none" stroke-linecap="round"/><circle cx="30" cy="64" r="5" fill="#ff8a7a" opacity=".3"/><circle cx="70" cy="64" r="5" fill="#ff8a7a" opacity=".3"/><path d="M28 30Q40 22 54 24" stroke="#fff" stroke-opacity=".4" stroke-width="3.5" fill="none" stroke-linecap="round"/></svg>`}
+avatar=function(c){return c.fish?FISH(c):c.fox?FUR(c):c.pt?POT(c):HUM(c)};
+const TPM={Pipo:0,Lola:0,Marc:0,Bruna:2,Ramon:1,Nadia:3,Vidal:1,Greta:3,Tula:2,Joan:1,Aina:0,Biel:0,Carla:2,Oriol:3,Mireia:1,Roc:0,Pirata:0,Rafael:1,Hikaru:2,Magnus:3,"Rey Enigma":3};
+BI.forEach(b=>{if(TPM[b.n]!==undefined)b.a.tp=TPM[b.n]});
+BI.find(b=>b.n==="Ramon").a.wr=1;BI.find(b=>b.n==="Lola").a.fk=1;BI.find(b=>b.n==="Patata").a.pt=1;
+/* ===== NOUS BOTS ===== */
+LV.push({elo:500,d:1,n:200,s:{cn:3,adv:6,ks:0,ak:0}},{elo:750,d:2,n:140,s:{cn:4,adv:10,ks:5,ak:4}},{elo:1300,d:3,n:35,s:{cn:5,adv:6,ks:20,ak:2,rk:6}},{elo:1700,d:3,n:5,s:{cn:6,adv:8,ks:25,ak:6,qa:2}},{elo:2100,d:3,n:0,s:{cn:6,adv:7,ks:40,ak:3,qa:3,rk:5}},{elo:2300,d:3,n:0,s:{cn:5,adv:7,ks:20,ak:7,qa:6,rk:4,mv:1.1}});
+BI.push(
+{n:"Cuiner",a:{bg:"#f4a261",skin:"#f1c9a5",hair:"#5a3a22",hs:0,top:"#f5f5f5",ex:0,ch:1,mu:1,tp:1},say:{hi:"Avui cuinem una partida ben calenta!",lost:"Se m’ha cremat la peça!|Això no estava a la recepta.",took:"Una pizca de material.|A la cassola!",chk:"Escac! Ben sazonat.",win:"Mat servit amb una mica de sal.",lose:"Se m’ha passat de cocció.",draw:"Taules: massa temps al forn."}},
+{n:"Vaquer",a:{bg:"#d4a373",skin:"#d9a77a",hair:"#6b3e26",hs:2,top:"#b5651d",ex:1,cw:1,mu:1},say:{hi:"Aquest poble és massa petit per a dos reis.",lost:"Has disparat primer, amic.|Em sap greu pel cavall.",took:"Ben apuntat.|Una menys al ranxo.",chk:"Escac! Aixeca les mans.",win:"Mat al mig del carrer.",lose:"T’has guanyat la meva estrella.",draw:"Taules, i cadascú a casa."}},
+{n:"Robot",a:{bg:"#37474f",skin:"#b0bec5",hair:"#90a4ae",nh:1,rb:1,top:"#455a64",ex:3},say:{hi:"BIP BOP. INICIANT PARTIDA.",lost:"ERROR: PEÇA NO TROBADA.|RECALCULANT...",took:"MATERIAL ADQUIRIT.|OPERACIÓ COMPLETADA.",chk:"ESCAC. PROBABILITAT DE MAT: ALTA.",win:"VICTÒRIA CALCULADA.",lose:"ERROR 404: VICTÒRIA NO TROBADA.",draw:"EMPAT. SISTEMA EN ESPERA."}},
+{n:"Ninja",a:{bg:"#1b1b2f",skin:"#e9b894",hair:"#111",nh:1,nj:1,top:"#222",ex:2},say:{hi:"No em veuràs venir.",lost:"Una ombra menys.|Ho esperava.",took:"Silenci... i captura.",chk:"Escac. Sense soroll.",win:"Mat. Ni ho has notat.",lose:"Has vist l’ombra. Impressionant.",draw:"Taules. Em retiro a l’ombra."}},
+{n:"Astronauta",a:{bg:"#0b1d3a",skin:"#f0c8a4",hair:"#3a2a20",hs:1,top:"#e8edf2",ex:0,as:1},say:{hi:"Houston, comencem la partida!",lost:"Houston, tenim un problema.|Pèrdua de material a bord.",took:"Captura en òrbita.|Objectiu assolit.",chk:"Escac des de l’espai!",win:"Missió complerta. Mat.",lose:"Aterratge d’emergència...",draw:"Taules: orbitem l’equilibri."}},
+{n:"Bruixa",a:{bg:"#3d1f5c",skin:"#cfe8c0",hair:"#2a1a14",hs:4,top:"#2b1b3d",ex:1,wt:1,er:"#f2b84b"},say:{hi:"Una poció per a cada jugada.",lost:"Aquesta peça estava embruixada.|Ho pagaràs amb un sortilegi.",took:"Abracadabra! Capturada.|Una peça al calderó.",chk:"Escac! I sense fumera.",win:"Mat. Aquesta és la meva màgia.",lose:"Has trencat l’encanteri.",draw:"Taules, fins a la propera lluna plena."}});
+AX.push({},{},{},{},{},{});ORD.push(24,25,26,27,28,29);ORD.sort((a,b)=>LV[a].elo-LV[b].elo);
+/* ===== CONTINGUT ===== */
+BT.push(["#ebecd0","#739552"],["#f0f0f0","#7a8b9a"],["#e8d5b7","#a0522d"],["#d8f3dc","#40916c"],["#ffe5d9","#d8737f"],["#e9ecef","#495057"],["#fefae0","#bc6c25"],["#caf0f8","#0077b6"],["#f1faee","#457b9d"],["#fff1e6","#8d5524"]);
+const mk2=(w,b)=>({w,b,sw:`0 0 2px ${b},0 1px 1px ${b}`,sb:`0 0 2px ${w}`});
+PS.push(...[["#eceff1","#263238"],["#bbdefb","#0d2a6b"],["#c8f7dc","#06402b"],["#ffcdd2","#7f0f1c"],["#ffe0a3","#5d3a00"],["#e8d9ff","#3a1d6e"],["#d9fff1","#4a2c1a"],["#ffe0ec","#1d3557"]].map(a=>mk2(...a)));
+HC.push("#00bcd4","#8bc34a","#ff5722","#9c27b0");
+TB.push(30,120,300,1200);TN.push("30 s","2+1","5+3","20 min");TIN.push(0,1,3,0);
+AL.push(["w10","10 victòries"],["w25","25 victòries"],["w50","50 victòries"],["g50","50 partides jugades"],["st5","Ratxa de 5 victòries"],["st10","Ratxa de 10 victòries"],["bots5","Guanya a 5 bots diferents"],["bots15","Guanya a 15 bots diferents"],["e1000","Elo estimat 1000"],["e1500","Elo estimat 1500"],["e2000","Elo estimat 2000"],["d5","5 taules"],["promo","Corona un peó"],["castle","Fes un enroc"],["queen","Captura una dama"],["check","Dóna el teu primer escac"],["days7","7 dies seguits jugant"],["egg","Descobreix el secret"]);
+LS.push([1,"Cavalls: salts","El cavall és bo al centre i en posicions tancades. Evita deixar-lo a la vora: pot quedar atrapat."],[1,"Alfils: diagonals","Els alfils funcionen millor en diagonals obertes. Un alfil que només veu els seus propis peons és un alfil dolent."],[1,"La parella d’alfils","Dos alfils sovint valen més que alfil i cavall en posicions obertes, perquè cobreixen caselles dels dos colors."],[1,"Seguretat del rei","Enroca aviat i no moguis els peons davant del rei sense motiu: cada moviment crea forats per als atacs."],[2,"Columnes obertes","Una columna sense peons és una autopista per a les torres. Ocupa-la abans que el rival."],[2,"Peó passat protegit","Un peó passat protegit per un altre peó és una gran arma, sobretot en finals."],[2,"Alfil contra cavall","En posicions obertes l’alfil sol ser millor; en posicions tancades amb peons bloquejats, el cavall."],[2,"Intercanvis favorables","Canvia peces quan vas guanyant material; evita-ho quan vas perdent o necessites atac."],[3,"Finals de dama","Els finals de dama sovint acaben en escac perpetu. Si estàs pitjor, busca escacs contínuos."],[3,"La regla del quadrat","Per saber si el rei atrapa un peó passat, imagina un quadrat des del peó fins a la fila de coronació."],[3,"Rei actiu al final","En finals sense dames el rei és una peça forta: centralitza’l i acosta’l als peons."],[3,"Trencar el bloqueig","Contra una posició bloquejada, intenta obrir una segona zona de joc amb un avenç de peó."]);
+/* ===== MODES I AVANTATGES ===== */
+MN.push("Obertures clàssiques","Finals");MD.push("Comences des d’una posició d’obertura coneguda.","Comences des d’un final de partida (torres, peces menors, mats bàsics).");
+const OPF=["r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w","r1bqkbnr/1ppp1ppp/p1n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w","rnbqkbnr/pp2pppp/3p4/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R w","rnbqkbnr/ppp2ppp/4p3/3p4/3PP3/8/PPP2PPP/RNBQKBNR w","rnbqkbnr/ppp2ppp/4p3/3p4/2PP4/8/PP2PPPP/RNBQKBNR w","r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w","rnbqkbnr/pp2pppp/2p5/3p4/3PP3/8/PPP2PPP/RNBQKBNR w","rnbqk2r/ppppppbp/5np1/8/2PP4/2N5/PP2PPPP/R1BQKBNR w"];
+const FNF=["r3k3/pp3ppp/8/8/8/8/PP3PPP/R3K3 w","4r1k1/5ppp/8/8/8/8/5PPP/4R1K1 w","r5k1/5ppp/8/8/8/8/P4PPP/R5K1 w","2r3k1/p4ppp/8/8/8/8/P4PPP/2R3K1 w","5k2/2n2ppp/8/8/8/8/2B2PPP/5K2 w","8/8/8/4k3/8/8/8/R3K3 w","8/8/8/4k3/8/8/4Q3/4K3 w","8/8/4k3/8/8/8/8/R3K2R w","8/8/8/3k4/8/8/4PK2/8 w"];
+let HD=0;
+const NS1=newState;newState=function(f9){const s=NS1(f9);
+if(MODE===10||MODE===11){const L=MODE===10?OPF:FNF,f=L[Math.random()*L.length|0];s.b=parseB(f);s.turn="w";s.c={K:+(s.b[60]==="K"&&s.b[63]==="R"),Q:+(s.b[60]==="K"&&s.b[56]==="R"),k:+(s.b[4]==="k"&&s.b[7]==="r"),q:+(s.b[4]==="k"&&s.b[0]==="r")};RK={K:63,Q:56,k:7,q:0};KS={w:60,b:4}}
+const mine=p=>isW(p)===(ME==="w");
+if(HD===1||HD===2)for(let i=0;i<64;i++)if(/q/i.test(s.b[i])&&(HD===1?mine(s.b[i]):!mine(s.b[i])))s.b[i]="";
+if(HD===3||HD===4){const o=HD===3?ME==="w":ME!=="w",i=s.b.indexOf(o?"R":"r");if(i>=0)s.b[i]=""}
+return s};
+$("tm").parentElement.insertAdjacentHTML("afterend",'<div class="og"><span>Avantatge</span><div id="hdc"></div></div>');
+const RW1=rows;rows=function(){RW1();const e=$("hdc");e.innerHTML=["Cap","Sense la teva dama","Sense la dama rival","Sense la teva torre","Sense la torre rival"].map((n,i)=>`<button class="sm" data-i="${i}" aria-pressed="${i===HD}">${n}</button>`).join("");e.onclick=ev=>{const b=ev.target.closest("button");if(b){HD=+b.dataset.i;rows()}}};
+/* ===== MENU DE RIVALS ===== */
+let SRT=0;
+const M1=menu;menu=function(){M1();const L=$("lvs");L.firstElementChild.classList.add("hp2");
+let bi=0;LV.forEach((l,i)=>{if(Math.abs(l.elo-SS.r)<Math.abs(LV[bi].elo-SS.r))bi=i});
+L.insertAdjacentHTML("afterbegin",`<button class="hp2" data-l="${bi+1}"><span class="t"><b>🎯</b><small>Recomanat</small></span></button><button class="hp2" data-l="${(Date.now()/864e5|0)%LV.length+1}"><span class="t"><b>📅</b><small>Rival del dia</small></span></button>`);
+const bs=[...L.querySelectorAll("button[data-l]:not(.hp2)")];
+bs.forEach(b=>{const n=BI[+b.dataset.l-1].n,r=SB[n],sm=b.querySelector("small");if(r)sm.textContent=n+(r[0]?" ✓":"")+` · ${r[0]}-${r[1]}-${r[2]}`});
+if(SRT)bs.sort((a,b)=>BI[+a.dataset.l-1].n.localeCompare(BI[+b.dataset.l-1].n)).forEach(x=>L.appendChild(x));
+if($("srt"))$("srt").remove();L.insertAdjacentHTML("beforebegin",'<button id="srt" class="sm" style="margin-bottom:8px">Ordena: '+(SRT?"nom":"Elo")+"</button>");$("srt").onclick=()=>{SRT^=1;menu()}};
+/* ===== LOGROS, ESTADÍSTIQUES, PANELL ===== */
+const SE3=showEnd;showEnd=function(){SE3();const g=SS.w+SS.l+SS.d,wb=Object.values(SB).filter(r=>r[0]>0).length;
+[["w10",SS.w>=10],["w25",SS.w>=25],["w50",SS.w>=50],["g50",g>=50],["st5",SS.s>=5],["st10",SS.s>=10],["bots5",wb>=5],["bots15",wb>=15],["e1000",SS.r>=1000],["e1500",SS.r>=1500],["e2000",SS.r>=2000],["d5",SS.d>=5]].forEach(([i,ok])=>ok&&ach(i));
+SS.g=(SS.g||0)+1;SS.t=(SS.t||0)+Math.round((Date.now()-TSTART)/1000);svs()};
+let ARR=[],RD=null;
+const P1=play;play=function(m){const pc=st.b[m.f],tg=st.b[m.t],me=pc&&isW(pc)===(ME==="w");P1(m);ARR=[];if(me&&!TR){if(m.pr)ach("promo");if(m.c)ach("castle");if(tg&&tg.toLowerCase()==="q")ach("queen");if(inCheck(st)&&st.turn!==ME)ach("check")}};
+let DS=0;try{const d=Date.now()/864e5|0,l=+localStorage.getItem("escacs-d")||0;let n=+localStorage.getItem("escacs-ds")||0;if(l!==d){n=l===d-1?n+1:1;localStorage.setItem("escacs-d",d);localStorage.setItem("escacs-ds",n)}DS=n;if(n>=7)ach("days7")}catch(e){}
+$("hA").insertAdjacentHTML("afterend",'<details id="hB" style="font-size:.85rem;margin-bottom:10px"><summary>Estadístiques per rival</summary><div id="hBl"></div></details>');
+const H3=home;home=function(){H3();$("hs").textContent+=` · Partides ${SS.g||0} · Temps ${Math.round((SS.t||0)/60)} min · Dies seguits ${DS}`;$("hBl").innerHTML=Object.entries(SB).map(([n,r])=>`<div>${n}: ${r[0]}-${r[1]}-${r[2]}</div>`).join("")||"Encara no has jugat."};
+const PN1=panel;panel=function(){PN1();$("av").style.borderColor=`hsl(${Math.round(Math.min(1,LV[lv-1].elo/4060)*280)} 70% 50%)`};
+/* ===== AJUSTOS ===== */
+const PKT=[{},{triangle:"sine",square:"triangle"},{triangle:"sawtooth",sine:"triangle"}];
+let Z={sp:0,bz:70,cm:0,bo:1,ra:0,ps:0,lt:0,lg:0,hc:0,mo:0,c1:"#f0d9b5",c2:"#b58863"};try{Z={...Z,...JSON.parse(localStorage.getItem("escacs-z")||"{}")}}catch(e){}
+BT.push([Z.c1,Z.c2]);const CI=BT.length-1;
+$("xr").insertAdjacentHTML("beforebegin",'<div class="og"><span>Paquet de so</span><div id="zsp"></div></div><div class="og"><span>Mida</span><div class="tg"><label>Tauler <input type="range" id="zbz" min="44" max="90" step="2"></label></div></div><div class="og"><span>Marc</span><div id="zbo"></div></div><div class="og"><span>Caselles</span><div id="zra"></div></div><div class="og"><span>Colors</span><div class="tg"><label>Clar <input type="color" id="zc1"></label><label>Fosc <input type="color" id="zc2"></label></div></div><div class="og"><span>Més</span><div class="tg"><label><input type="checkbox" id="zcm"> Amaga el títol</label><label><input type="checkbox" id="zps"> Ombra a les peces</label><label><input type="checkbox" id="zlt"> Notació amb lletres</label><label><input type="checkbox" id="zlg"> Text gran</label><label><input type="checkbox" id="zhc"> Alt contrast</label><label><input type="checkbox" id="zmo"> Rellotge monoespai</label></div></div>');
+function zs(){try{localStorage.setItem("escacs-z",JSON.stringify(Z))}catch(e){}
+const d=document.documentElement,B=$("board");B.style.setProperty("--sq","min(11.6vw,"+Z.bz+"px)");B.style.borderWidth=["0px","3px","7px"][Z.bo];d.style.setProperty("--rad",Z.ra?"8px":"0px");
+document.querySelector("h1").style.display=Z.cm?"none":"";d.classList.toggle("psh",!!Z.ps);d.style.fontSize=Z.lg?"19px":"";d.classList.toggle("hcn",!!Z.hc);d.classList.toggle("mono",!!Z.mo);
+$("zbz").value=Z.bz;$("zc1").value=Z.c1;$("zc2").value=Z.c2;for(const[i,k]of[["zcm","cm"],["zps","ps"],["zlt","lt"],["zlg","lg"],["zhc","hc"],["zmo","mo"]])$(i).checked=!!Z[k];
+const bt=(id,a,k)=>{$(id).innerHTML=a.map((n,i)=>`<button class="sm" data-i="${i}" aria-pressed="${i===Z[k]}">${n}</button>`).join("");$(id).onclick=e=>{const b=e.target.closest("button");if(b){Z[k]=+b.dataset.i;zs()}}};
+bt("zsp",["Clàssic","Suau","Dur"],"sp");bt("zbo",["Sense","Fi","Gruixut"],"bo");bt("zra",["Quadrades","Arrodonides"],"ra")}
+zs();
+$("zbz").oninput=()=>{Z.bz=+$("zbz").value;zs()};
+for(const[i,k]of[["zcm","cm"],["zps","ps"],["zlt","lt"],["zlg","lg"],["zhc","hc"],["zmo","mo"]])$(i).onchange=()=>{Z[k]=$(i).checked?1:0;zs();render()};
+$("zc1").oninput=$("zc2").oninput=()=>{Z.c1=$("zc1").value;Z.c2=$("zc2").value;BT[CI]=[Z.c1,Z.c2];ob=CI;zs();applyOpt()};
+/* ===== EINES ===== */
+const PNM={k:"Rei",q:"Dama",r:"Torre",b:"Alfil",n:"Cavall",p:"Peó"};
+const R4=render;render=function(){R4();if(Z.lt)$("mv").innerHTML=$("mv").innerHTML.replace(/[♔♕♖♗♘♚♛♜♝♞]\uFE0E?/g,m=>"KQRBNKQRBN"["♔♕♖♗♘♚♛♜♝♞".indexOf(m[0])]);
+for(const d of $("board").children){if(d.dataset&&d.dataset.s!==undefined){const p=st.b[+d.dataset.s];if(p)d.title=PNM[p.toLowerCase()]+(isW(p)?" blanc":" negre")}}
+if(ARR.length){let g="";for(const k of ARR){const[a,b]=k.split("-").map(Number);if(a===b){const q=di(a);g+=`<circle cx="${(q&7)+.5}" cy="${(q>>3)+.5}" r=".44" fill="none" stroke="#f59e0b" stroke-width=".08" opacity=".85"/>`}else g+=arrow(a,b,"#f59e0b",.8)}$("board").insertAdjacentHTML("beforeend",`<svg id="mk" viewBox="0 0 8 8" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:6">${g}</svg>`)}};
+BD.addEventListener("mousedown",e=>{if(e.button!==2)return;const d=e.target.closest(".s");RD=d?+d.dataset.s:null});
+BD.addEventListener("mouseup",e=>{if(e.button!==2||RD===null)return;const d=e.target.closest(".s");if(!d){RD=null;return}const k=RD+"-"+d.dataset.s,i=ARR.indexOf(k);i>=0?ARR.splice(i,1):ARR.push(k);RD=null;render()});
+BD.addEventListener("click",()=>{if(ARR.length){ARR=[];render()}});
+$("bub").insertAdjacentHTML("afterend",'<div id="emo" style="display:flex;gap:4px;margin-top:6px"></div>');
+const EM={"👍":["Gràcies!","Ho he fet bé, eh?"],"😀":["Així m’agrada!","Quin bon humor!"],"😮":["Sorprès, eh?","Ho tenia previst."],"🤔":["Pensa, pensa...","Vols un cafè?"],"😎":["Molt fresc.","Ja veurem qui riu al final."]};
+$("emo").innerHTML=Object.keys(EM).map(e=>`<button class="sm" style="padding:2px 8px">${e}</button>`).join("");
+$("emo").onclick=e=>{const b=e.target.closest("button");if(b&&!TR)bub(EM[b.textContent][Math.random()*2|0])};
+$("cp").insertAdjacentHTML("afterend",'<button id="dl">Descarregar</button>');
+$("dl").onclick=()=>{let t="";for(let i=0;i<moves.length;i+=2)t+=(i/2+1)+". "+moves[i]+(moves[i+1]?" "+moves[i+1]:"")+" ";t=t.replace(/[♔♕♖♗♘♚♛♜♝♞]\uFE0E?/g,m=>"KQRBNKQRBN"["♔♕♖♗♘♚♛♜♝♞".indexOf(m[0])]).replace(/\uFE0E/g,"");
+const x=`[Event "Escacs BETA"]\n[Date "${new Date().toISOString().slice(0,10)}"]\n[Black "${BI[lv-1].n}"]\n\n${t}\n`,a=document.createElement("a");a.href=URL.createObjectURL(new Blob([x],{type:"text/plain"}));a.download="partida.txt";a.click()};
+const wl=()=>{try{navigator.wakeLock.request("screen").catch(()=>{})}catch(e){}};
+const N2=newGame;newGame=function(){ARR=[];wl();N2()};
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)wl()});
+function help(){if($("hlp")){$("hlp").remove();return}const d=document.createElement("div");d.id="hlp";d.style.cssText="position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(6px);padding:16px";d.innerHTML='<div class="card big"><h2>Ajuda</h2><p><b>Dreceres:</b> N nova partida · M so · T tema · F pantalla completa · Esc cancel·la.</p><p><b>Ratolí:</b> arrossega o fes clic per moure. Clic dret: cancel·la premoves. Arrossega amb clic dret per dibuixar fletxes i cercles (clic a la mateixa casella = cercle).</p><p><b>Valors:</b> peó 1 · cavall 3 · alfil 3 · torre 5 · dama 9.</p><p><b>Novetats BETA:</b> nous bots, modes d’obertures i finals, avantatges, logros, més personalització i més.</p><button class="pri" style="width:100%">Tanca</button></div>';d.onclick=()=>d.remove();document.body.appendChild(d)}
+document.querySelector("h1").insertAdjacentHTML("beforeend",' <small style="font-size:.45em;vertical-align:middle;background:var(--hi);color:#1c2b36;padding:2px 8px;border-radius:99px">BETA</small>');
+let EC=0;document.querySelector("h1").onclick=()=>{if(++EC>=7){EC=0;confetti();ach("egg");toast("Has trobat el secret! 🐟")}};
+try{if(!localStorage.getItem("escacs-w")){localStorage.setItem("escacs-w","1");setTimeout(()=>toast("Benvingut a Escacs BETA!"),600)}}catch(e){}
+/* ===== BETA FINAL: +110 NOVETATS ===== */
+(()=>{
+const n0=LV.length,m0=MN.length;
+/* 6 bots nous */
+LV.push({elo:300,d:1,n:400,s:{cn:1,adv:2,ks:0,ak:0}},{elo:550,d:1,n:180,s:{cn:4,adv:5,ks:0,ak:3}},{elo:1150,d:2,n:50,s:{cn:8,adv:6,ks:30,ak:2}},{elo:1450,d:3,n:30,s:{cn:5,adv:9,ks:15,ak:7}},{elo:1950,d:3,n:0,s:{cn:6,adv:6,ks:35,ak:4,rk:4}},{elo:2500,d:3,n:0,s:{cn:6,adv:8,ks:30,ak:6,qa:4,rk:5}});
+BI.push(
+{n:"Avi Pere",a:{bg:"#c9ada7",skin:"#e7bd9a",hair:"#e6e6e6",hs:0,top:"#8d6e63",ex:0,gl:1,wr:1},say:{hi:"Vinga, nen, juguem una partideta.",lost:"Ai, la peça... ja no hi veig bé.|Això abans no passava.",took:"Ha, ha! Una peça!|Mira per on.",chk:"Escac, noi!",win:"Mat! Encara sé un parell de coses.",lose:"Has guanyat. Quina joventut!",draw:"Taules, i a prendre el cafè."}},
+{n:"Fantasma",a:{bg:"#37474f",skin:"#eef3f8",hair:"#cfd8e3",nh:1,top:"#cfd8e3",ex:4},say:{hi:"Buuu! Juguem?",lost:"Això m’ha travessat!|Uuuuh, la meva peça!",took:"Se l’ha endut la boira.|Buuu!",chk:"Escac! Buuu!",win:"T’he fet por, eh? Mat.",lose:"M’has fet fora de la casa!",draw:"Taules... ens veiem a la nit."}},
+{n:"Doctora",a:{bg:"#80cbc4",skin:"#e9b894",hair:"#5a3a22",hs:4,top:"#e8f4f8",ex:0,gl:1,tp:1},say:{hi:"Respira. Comencem la consulta.",lost:"Hi haurà baixa al tauler.|Això és una pèrdua clínica.",took:"Peça extirpada.|Operació reeixida.",chk:"Escac: el rei té febre.",win:"Mat. Recepta: més pràctica.",lose:"Has guanyat. Alta mèdica!",draw:"Taules: estat estable."}},
+{n:"Viking",a:{bg:"#5c677d",skin:"#e9b894",hair:"#d9a441",hs:3,top:"#6b4f3a",ex:2,bd:1},say:{hi:"Per Odin! Ataquem!",lost:"Una peça caiguda... al Valhalla!|Odin, mira això!",took:"Botí de guerra!|Skål!",chk:"Escac! Cap al rei!",win:"Victòria! Al banquet!",lose:"Un guerrer sap perdre.",draw:"Taules: l’hidromel ens espera."}},
+{n:"Detectiu",a:{bg:"#a68a64",skin:"#e7bd9a",hair:"#3a2a20",hs:1,top:"#8d6e63",ex:3,gl:1,mu:1,hat:"#5d4037",tp:3},say:{hi:"Elemental. Descobriré les teves intencions.",lost:"Una pista falsa...|Interessant: m’has sorprès.",took:"Cas tancat, peça meva.|Una prova més.",chk:"Escac: tinc el culpable.",win:"Mat. Cas resolt.",lose:"Has guanyat. Reobriré la investigació.",draw:"Taules: no hi ha prou proves."}},
+{n:"Samurai",a:{bg:"#b23a48",skin:"#e9b894",hair:"#14202a",hs:2,top:"#7b1e1e",ex:2},say:{hi:"Que el camí sigui just. Comencem.",lost:"Cau una peça, però l’honor roman.|Ben jugat.",took:"Un tall net.|Sense dubtar.",chk:"Escac. El rei és a l’espasa.",win:"Mat. Inclino el cap.",lose:"Ets un rival digne. Em rendeixo.",draw:"Taules: honor mutu."}}
+);
+AX.push({},{},{},{},{},{});
+for(let i=n0;i<LV.length;i++)ORD.push(i);ORD.sort((a,b)=>LV[a].elo-LV[b].elo);
+/* 12 temes de tauler, 10 paletes de peces, 5 colors de ressaltat */
+BT.push(["#f0e6d2","#a67c52"],["#e6f4ea","#2d6a4f"],["#fdf0d5","#c1121f"],["#caf0f8","#0077b6"],["#ffeedb","#ff7b00"],["#e5e5e5","#2b2d42"],["#f8edeb","#9d8189"],["#edf6f9","#006d77"],["#fff1e6","#bc6c25"],["#e0e1dd","#415a77"],["#f3e8ff","#7e22ce"],["#4a4a4a","#1c1c1c"]);
+PS.push(...[["#fffbe6","#3d2c00"],["#e0fbfc","#293241"],["#ffd6a5","#6a040f"],["#caffbf","#1b4332"],["#fdffb6","#3c096c"],["#ffc6ff","#240046"],["#a0c4ff","#03071e"],["#ffadad","#370617"],["#f1faee","#1d3557"],["#fefae0","#283618"]].map(([w,b])=>mk2(w,b)));
+HC.push("#ffb703","#06d6a0","#ef476f","#118ab2","#e5989b");
+/* 5 modes nous */
+MN.push("Sense torres","Sense cavalls","Cavalls reina","Sense dames ni torres","Torres i peons");
+MD.push("Les torres desapareixen del tauler.","Els cavalls desapareixen del tauler.","Els cavalls són dames: quatre dames per bàndol!","Sense dames ni torres: només peces menors.","Només torres i peons, sense peces menors.");
+const NS3=newState;newState=function(f9){const s=NS3(f9),k=MODE-m0;if(k>=0&&k<5){const R=[/r/i,/n/i,null,/[qr]/i,/[nbq]/i];for(let i=0;i<64;i++){const p=s.b[i];if(!p)continue;if(k===2){if(/n/i.test(p))s.b[i]=p==="N"?"Q":"q"}else if(R[k].test(p))s.b[i]=""}s.c={K:0,Q:0,k:0,q:0}}return s};
+try{const q=JSON.parse(localStorage.getItem("escacs-cfg")||"{}");if(q.m>=m0&&q.m<MN.length)MODE=q.m}catch(e){}
+/* 15 logros */
+AL.push(["fast15","Mat en menys de 15 jugades"],["elite","Guanya a un rival d’Elo 2000+"],["giant","Guanya a un rival d’Elo 3000+"],["long","Juga una partida de 60+ jugades"],["blitz","Guanya amb rellotge de 3 min o menys"],["flag","Guanya pel temps"],["pz25","25 problemes resolts"],["pz50","50 problemes resolts"],["pz100","100 problemes resolts"],["ls10","Llegeix 10 lliçons"],["d3","3 dies seguits jugant"],["d30","30 dies seguits jugant"],["w100","100 victòries"],["modes5","Guanya en 5 modes diferents"]);
+/* 16 lliçons */
+LS.push([1,"El mat del pastor","Un mat ràpid: la dama i l’alfil ataquen f7 (o f2). Evita’l defensant el peó amb el cavall (g8–f6) o amb la dama. Aprèn-lo per no caure-hi!"],[1,"Protegeix les teves peces","Abans de cada jugada, mira quines peces teves estan sense defensa. Una peça sense protecció és un regal per al rival."],[1,"Mira les amenaces","Després de cada jugada rival, pregunta’t: què vol fer? Quina peça meva ataca? Què deixa sense protecció?"],[1,"Rei segur","Enroca abans de llançar l’atac. Un rei al centre és un blanc fàcil, sobretot quan s’obren columnes."],[1,"Jugades amb propòsit","Cada jugada ha de servir per desenvolupar, controlar el centre, atacar o defensar. Moure peons de la vora sense motiu fa perdre temps."],[1,"Canvis de peces","Quan vas per davant en material, canvia peces. Quan vas per darrere, evita-ho i busca complicacions."],[2,"Mat de l’escala","Dama i torre (o dues torres) empenyen el rei cap a la vora: una controla una fila i l’altra dóna mat a la següent."],[2,"Sacrifici a h7","Si un alfil apunta a h7 i la dama pot ajudar, el sacrifici en h7 pot obrir l’atac contra el rei enrocat."],[2,"Cavall a la vora","«Cavall a la vora, cavall perdut»: a la vora controla la meitat de caselles. Porta’l cap al centre."],[2,"Parella d’alfils","Dos alfils units cobreixen caselles clares i fosques. En posicions obertes sovint valen més que alfil i cavall."],[2,"Columnes obertes","Una columna sense peons és una autopista per a les torres. Ocupa-la abans que ho faci el rival."],[2,"Clavada absoluta","Una peça que protegeix el rei d’un atac no es pot moure. Ataca-la amb peons i guanya-la."],[3,"El quadrat del peó","Per saber si el rei atura un peó passat, dibuixa un quadrat des del peó fins a la fila de coronació: si el rei hi entra, l’atura."],[3,"Final de torre: Lucena","Amb torre i peó contra torre, el «pont» a la quarta fila protegeix el rei dels escacs i guanya la partida."],[3,"Final de torre: Philidor","Defensant, mantén la torre a la tercera fila fins que el peó avanci; després, escacs per darrere."],[3,"Planificació","Sense tàctica a la vista, tria un pla: atacar debilitats, millorar la peça pitjor situada o avançar peons. Una jugada, una idea."]);
+/* 20 noms d’obertures */
+Object.assign(OPN,{"e2e4 e7e5 g1f3 b8c6 f1b5 a7a6":"Ruy López: variant Morphy","e2e4 e7e5 g1f3 b8c6 f1c4 f8c5":"Giuoco Piano","e2e4 e7e5 g1f3 b8c6 f1c4 g8f6":"Defensa dels dos cavalls","e2e4 c7c5 g1f3 d7d6":"Siciliana (…d6)","e2e4 c7c5 g1f3 b8c6":"Siciliana clàssica","e2e4 c7c5 b1c3":"Siciliana tancada","d2d4 d7d5 c2c4 e7e6":"Gambit de dama refusat","d2d4 d7d5 c2c4 d5c4":"Gambit de dama acceptat","d2d4 g8f6 c2c4 e7e6":"Defensa índia (…e6)","g1f3 d7d5 g2g3":"Sistema Catalana","e2e4 g8f6":"Defensa Alekhine","e2e4 d7d6":"Defensa Pirc / Moderna","e2e4 g7g6":"Defensa moderna","b2b3":"Obertura Larsen","f2f4":"Obertura Bird","b1c3":"Obertura Van Geet","g2g3":"Obertura del peó de cavall de rei","e2e4 e7e5 b1c3":"Obertura vienesa","e2e4 e7e5 g1f3 d7d6":"Defensa Philidor","d2d4 d7d5 g1f3":"Joc de peó de dama: Zukertort"});
+/* 15 consells */
+const TIPS=["Controla el centre: peons i peces cap a e4, d4, e5, d5.","Abans de moure, mira si l’última jugada rival t’amenaça res.","Desenvolupa les peces menors abans de repetir moviments.","Enroca aviat: el rei és més segur a la cantonada.","No treguis la dama massa d’hora: et faria perdre temps.","Una torre sense feina? Porta-la a una columna oberta.","Quan vagis per davant en material, canvia peces.","Els cavalls prefereixen posicions tancades; els alfils, les obertes.","Al final, el rei és una peça forta: activa’l!","Comprova sempre escacs, captures i amenaces abans de moure.","Un peó passat ha d’avançar: no el deixis dormir.","Si dubtes, millora la teva peça pitjor situada.","Els finals es guanyen amb tècnica: practica’n cada dia.","Perdre és aprendre: revisa la partida amb l’anàlisi!","Respira i pensa dos moviments endavant."];
+/* estat */
+let IDL=Date.now(),EV=0,CUSTF=null;
+try{EV=+localStorage.getItem("escacs-n")||0}catch(e){}
+/* botons */
+$("dl").insertAdjacentHTML("afterend",'<button id="fc">Copiar FEN</button>');
+$("hc").insertAdjacentHTML("beforebegin",'<button id="hf">Carregar posició (FEN)</button>');
+$("qf").insertAdjacentHTML("beforebegin",'<button id="qe" aria-label="Barra d’avantatge">📊</button>');
+$("mat").insertAdjacentHTML("beforebegin",'<div id="evb" hidden style="height:10px;border:2px solid var(--ink);border-radius:5px;overflow:hidden;margin:8px 0 0;background:#14202a"><i id="evf" style="display:block;height:100%;width:50%;background:var(--hi);transition:width .4s"></i></div>');
+/* FEN */
+const fenOf=()=>{const r=[];for(let i=0;i<8;i++){let q="",n=0;for(let j=0;j<8;j++){const p=st.b[i*8+j];if(p){if(n)q+=n;n=0;q+=p}else n++}if(n)q+=n;r.push(q)}const c=(st.c.K?"K":"")+(st.c.Q?"Q":"")+(st.c.k?"k":"")+(st.c.q?"q":"");return r.join("/")+" "+st.turn+" "+(c||"-")+" "+(st.ep>=0?sqn(st.ep):"-")+" "+st.hm+" "+(Math.ceil(moves.length/2)+1)};
+$("fc").onclick=()=>{if(!st||TR)return;const f=fenOf();try{navigator.clipboard.writeText(f).then(()=>{note="FEN copiat.";render()},()=>prompt("FEN:",f))}catch(e){prompt("FEN:",f)}};
+const NS4=newState;newState=function(f9){const s=NS4(f9);if(CUSTF){const q=CUSTF.split(" "),p=fromFen(CUSTF),c=q[2]||"-";s.b=p.b;s.turn=p.turn;s.c={K:+/K/.test(c),Q:+/Q/.test(c),k:+/k/.test(c),q:+/q/.test(c)};s.ep=-1;if(q[3]&&q[3]!=="-"){const f="abcdefgh".indexOf(q[3][0]),r=8-+q[3][1];if(f>=0&&r>=0&&r<8)s.ep=r*8+f}s.hm=+q[4]||0;RK={K:63,Q:56,k:7,q:0};KS={w:60,b:4};CUSTF=null}return s};
+$("hf").onclick=()=>{const f=(prompt("Enganxa una posició en format FEN:")||"").trim();if(!f)return;const t=f.split(" "),p=fromFen(f);if(!/^[pnbrqkPNBRQK1-8\/]+$/.test(t[0])||p.b.length!==64||!p.b.includes("K")||!p.b.includes("k")||!/^[wb]$/.test(p.turn)){alert("FEN no vàlid.");return}CUSTF=f;MODE=0;const c=COL;COL=0;show(null);newGame();COL=c;if(st.turn!==ME){busy=true;render();setTimeout(()=>{if(!over)play(aiMove(st,lv))},BDL[BS])}};
+/* ganxos */
+const P9=play;play=function(m){IDL=Date.now();P9(m)};
+const N9=newGame;newGame=function(){IDL=Date.now();N9()};
+const R9=render;render=function(){R9();const b=$("evb");b.hidden=!EV||TR;if(EV&&!TR){const v=ev(st.b)*(ME==="w"?1:-1);$("evf").style.width=(50+Math.max(-450,Math.min(450,v))/9)+"%";b.title="Avantatge teu: "+(v>0?"+":"")+(v/100).toFixed(1)}};
+$("qe").onclick=()=>{EV^=1;try{localStorage.setItem("escacs-n",EV)}catch(e){}render()};
+
+
+/* logros i rècords */
+const SE9=showEnd;showEnd=function(){SE9();const w=over===ME,g=LV[lv-1].elo,mv=Math.ceil(moves.length/2);if(w&&!FLAG)SS.fw=Math.min(SS.fw||999,mv);SS.lg=Math.max(SS.lg||0,mv);
+if(w){if(moves.length<30&&!FLAG&&inCheck(st)&&!legal(st).length)ach("fast15");if(g>=2000)ach("elite");if(g>=3000)ach("giant");if(TL&&TL<=180)ach("blitz");if(FLAG===1)ach("flag");if(SS.w>=100)ach("w100");SS.mw=SS.mw||[];if(!SS.mw.includes(MODE))SS.mw.push(MODE);if(SS.mw.length>=5)ach("modes5")}
+if(mv>=60)ach("long");if(LR.length>=10)ach("ls10");if(DS>=3)ach("d3");if(DS>=30)ach("d30");svs()};
+const TM9=trMove;trMove=function(m){TM9(m);const n=TRS.length;if(n>=25)ach("pz25");if(n>=50)ach("pz50");if(n>=100)ach("pz100")};
+const H9=home;home=function(){H9();const g=SS.w+SS.l+SS.d;document.querySelector("#home .card p").textContent=`Juga contra ${LV.length} rivals i entrena amb lliçons i problemes.`;
+$("hs").textContent+=` · Victòria més ràpida ${SS.fw?SS.fw+" jug.":"—"} · Partida més llarga ${SS.lg||0} jug.`+(g?` · ${Math.round(SS.w*100/g)}% victòries`:"");
+let t=$("tip");if(!t){$("hs").insertAdjacentHTML("afterend",'<p id="tip" style="font-size:.85rem"></p>');t=$("tip")}t.textContent="💡 "+TIPS[(Date.now()/864e5|0)%TIPS.length]};
+/* burles quan trigues */
+const IDLE=["Et toca a tu...","Hi ha algú? Jo espero.","No tinc pressa. Bé, una mica sí.","Zzz... Ah! Continua, continua.","Una jugada, si us plau.","Aquesta posició és interessant, eh?"];
+setInterval(()=>{if(TR||ANM||over||document.hidden||!st||!moves||!moves.length||busy||st.turn!==ME)return;if(Date.now()-IDL>45000){IDL=Date.now();bub(IDLE[Math.random()*IDLE.length|0])}},5000);
+/* dreceres i ajuda */
+document.addEventListener("keydown",e=>{if(e.ctrlKey||e.metaKey||e.altKey||/INPUT|TEXTAREA/.test(document.activeElement.tagName))return;if(!$("home").hidden||!$("start").hidden||!$("cust").hidden||!$("trn").hidden)return;const k=e.key.toLowerCase();if(k==="e")$("qe").click()});
+const HP=help;help=function(){HP();const d=$("hlp");if(d)d.querySelector("p").insertAdjacentHTML("afterend","<p><b>Noves dreceres:</b> E barra d’avantatge. Pots copiar i carregar posicions FEN.</p>")};$("qh").onclick=help;
+const bg=document.querySelector("h1 small");if(bg)bg.textContent="BETA 1.0";
+})();
+/* ===== +60 BOTS PER CATEGORIES ===== */
+(()=>{
+const n1=LV.length,CAT={};
+const SK=["#f3cfae","#e9b894","#d9a77a","#8d5a3b","#f0c8a4"],HR=["#2a1a14","#6b3e26","#c0392b","#d9a441","#14202a","#9a9a9a"],TC=["#4a90d9","#d9534f","#2e8b57","#8e44ad","#e07a5f","#34495e","#f2b84b"],BG=["#9ec5e8","#f6d186","#e58f8f","#8fc1a9","#b9a3e3","#f7a8b8","#cfd8dc"];
+const stat=(e,h,o)=>({elo:e,d:e<700?1:e<1300?2:3,n:Math.round(Math.pow(Math.max(0,2000-e)/2000,2)*350),s:{cn:Math.min(9,2+(e/300|0)),adv:4+h%6,ks:e>900?(h%4)*15:0,ak:h%8,...(e>1600?{qa:3}:{}),...(e>1200?{rk:4}:{}),...o}});
+const PL={Animals:{lost:"Ai! La meva peça!|Això no tocava!",took:"Hap! Peça meva!|Gràcies pel regal!",chk:"Escac!",win:"Mat! Bona partida!",lose:"Has guanyat. Enhorabona!",draw:"Taules. Empat!"},
+Fantasia:{lost:"Una peça menys... el destí és capritxós.|Això no era a la profecia.",took:"Peça reclamada!|Una captura llegendària!",chk:"Escac! El rei tremola.",win:"Mat! La profecia es compleix.",lose:"Has vençut. Ets un heroi!",draw:"Taules. La batalla queda igualada."},
+Oficis:{lost:"Un petit contratemps.|Ho tornaré a intentar.",took:"Feina feta!|Una peça més a la caixa d’eines.",chk:"Escac!",win:"Mat. Missió complerta.",lose:"Has guanyat. Bona feina!",draw:"Taules. Hem fet un bon equip."},
+Professionals:{lost:"Bona jugada. Reajustem el pla.|Compte: això canvia l’avaluació.",took:"Material guanyat; seguim el pla.|Captura calculada.",chk:"Escac.",win:"Mat. Partida ben executada.",lose:"Ben jugat. Et reconec el mèrit.",draw:"Taules acordades."}};
+const add=(c,n,a,e,hi,o)=>{LV.push(stat(e,n.length*7+n.charCodeAt(0),o));BI.push({n,a,say:{hi,...PL[c]}});AX.push({});CAT[n]=c};
+/* categories dels bots existents */
+"Furro,Stonkfish".split(",").forEach(n=>CAT[n]="Animals");"Patata,Rey Enigma,Fantasma,Bruixa,Robot".split(",").forEach(n=>CAT[n]="Fantasia");"Pirata,Cuiner,Vaquer,Ninja,Astronauta,Doctora,Viking,Detectiu,Samurai".split(",").forEach(n=>CAT[n]="Oficis");"Hikaru,Magnus".split(",").forEach(n=>CAT[n]="Professionals");
+/* avatar d’emoji */
+const A9=avatar;avatar=function(c){return c.emo?`<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="${c.bg}"/><text x="50" y="72" font-size="62" text-anchor="middle">${c.emo}</text></svg>`:A9(c)};
+/* 15 animals */
+[["Conill","🐰",350,"Bup bup! Juguem?"],["Tortuga","🐢",450,"Sense pressa... molta calma."],["Ovella","🐑",600,"Bee! Et seguiré."],["Granota","🐸",750,"Cruac! Salto primer."],["Gat","🐱",900,"Miau! Prepara’t."],["Abella","🐝",1050,"Bzzz! Picaré fort."],["Gos","🐶",1200,"Guau! Vaig a per tot."],["Mico","🐵",1350,"Uuh-uuh! Aquí, aquí!"],["Pingüí","🐧",1500,"Piu! Fa fred al tauler."],["Mussol","🦉",1700,"Hu-hu. Ho veig tot."],["Llop","🐺",1850,"Auuu! Cacem en grup."],["Dofí","🐬",2000,"Iiii! Salt tàctic!"],["Elefant","🐘",2150,"Bruuum. Mai no oblido."],["Lleó","🦁",2350,"Rugit! El rei sóc jo."],["Ós","🐻",2600,"Grrr. Aixafaré el teu centre."]].forEach(([n,e,l,h],i)=>add("Animals",n,{emo:e,bg:BG[i%7]},l,h));
+/* 15 fantasia */
+[["Follet","🧚‍♂️",400,"Hihi! Et canviaré les peces de lloc."],["Zombi","🧟",650,"Cervellsss... i escacs."],["Orc","👹",850,"Orc aixafa! Orc ataca!"],["Troll","🧌",1000,"Aquest pont és meu."],["Fada","🧚",1250,"Un desig per a cada jugada."],["Elf","🧝",1400,"Elegància abans que força."],["Sirena","🧜‍♀️",1550,"Canto, i tu perds el cap."],["Vampir","🧛",1750,"Tinc tota la nit per guanyar."],["Gegant","🗿",1900,"Poc a poc, però aixafo."],["Unicorn","🦄",2050,"Brillo i guanyo."],["Mag","🧙",2250,"Les meves peces tenen màgia."],["Golem","🪨",2450,"Sóc de pedra. No cedeixo."],["Drac","🐉",2700,"Foc! Cremaré el teu rei."],["Kraken","🦑",2950,"Surto del fons. Ho engoliré tot."],["Fènix","🔥",3200,"Moro i ressorgeixo. Sempre."]].forEach(([n,e,l,h],i)=>add("Fantasia",n,{emo:e,bg:["#3d1f5c","#2c3e50","#4a1942","#0b3d2e","#264653"][i%5]},l,h));
+/* 15 oficis */
+[["Jardiner",500,{hat:"#588157"},"Plantarem peons i collirem un mat."],["Pastisser",700,{ch:1,tp:1,top:"#fff"},"Aquesta partida serà dolça."],["Pagès",950,{hat:"#d4a373"},"Sembrar al centre, collir al final."],["Barber",1100,{mu:1,hs:1},"Et deixaré net de peces."],["Mariner",1250,{hat:"#1d3557",bd:1},"Bon vent i bona mar!"],["Músic",1400,{hp:"#111"},"Juguem al ritme."],["Fotògraf",1550,{gl:1},"Em fixo en cada detall."],["Pintor",1700,{hat:"#c1121f"},"El tauler és el meu llenç."],["Fuster",1850,{hat:"#c9a66b"},"Mesurem dos cops, movem un."],["Mecànic",2000,{hat:"#e07a5f"},"Ajustaré la teva posició."],["Bomber",2150,{hat:"#c1121f",mu:1},"Aquest atac ho apago tot."],["Policia",2300,{hat:"#0b2545"},"Alto! Aquest rei està detingut."],["Mestra",2450,{gl:1,hs:4},"Aprendràs la lliçó."],["Pilot",2650,{hat:"#1d3557",gl:1},"Torre de control, comencem."],["Atleta",2850,{hp:"#d9534f"},"Resistència i velocitat!"]].forEach(([n,l,x,h],i)=>add("Oficis",n,{bg:BG[(i+3)%7],skin:SK[i%5],hair:HR[i%6],hs:i%5,top:TC[i%7],ex:i%4,...x},l,h));
+/* 15 professionals (bots d’estil; sense retrats ni cites) */
+[["Morphy",1900,"atac ràpid i desenvolupament",{ak:8,cn:9}],["Steinitz",2050,"petits avantatges acumulats"],["Lasker",2300,"lluita pràctica i resistent"],["Capablanca",2550,"simplicitat i finals",{adv:9}],["Alekhine",2650,"atacs complexos"],["Botvinnik",2700,"preparació i estratègia"],["Smyslov",2750,"harmonia i finals"],["Tal",2800,"sacrificis i caos",{ak:9,adv:7,ks:5}],["Petrosian",2850,"defensa sòlida",{ks:60,ak:0,adv:5}],["Spassky",2900,"joc universal"],["Polgár",3000,"tàctica agressiva"],["Fischer",3100,"precisió i obertures"],["Karpov",3150,"estrangulament posicional"],["Anand",3200,"velocitat i intuïció"],["Kasparov",3300,"iniciativa dinàmica",{ak:6,qa:5}]].forEach(([n,l,s,o],i)=>add("Professionals","Estil "+n,{bg:["#1b263b","#3a506b","#2c3e50","#264653","#4a4e69"][i%5],skin:SK[(i+1)%5],hair:HR[(i+2)%6],hs:i%5,top:["#1c2541","#2f4858","#3d405b","#22223b"][i%4],ex:3,gl:i%3===0?1:0},l,"Bot d’estil "+n+": "+s+".",o));
+for(let i=n1;i<LV.length;i++)ORD.push(i);ORD.sort((a,b)=>LV[a].elo-LV[b].elo);
+/* menú per categories */
+const CATS=["Tots","Persones","Fantasia","Animals","Oficis","Professionals"];let CF=0;
+const M8=menu;menu=function(){M8();const L=$("lvs");if($("ctb"))$("ctb").remove();L.insertAdjacentHTML("beforebegin",'<div id="ctb" class="pg" style="margin-bottom:8px"></div>');
+$("ctb").innerHTML=CATS.map((c,i)=>`<button class="sm" data-i="${i}" aria-pressed="${i===CF}">${c}</button>`).join("");
+$("ctb").onclick=e=>{const b=e.target.closest("button");if(b){CF=+b.dataset.i;menu()}};
+if(CF)L.querySelectorAll("button[data-l]").forEach(b=>{if(b.querySelector(".pa")&&(CAT[BI[+b.dataset.l-1].n]||"Persones")!==CATS[CF])b.hidden=true})};
+})();
+applyOpt();newGame();home();
+</script>
+</body>
+</html>
